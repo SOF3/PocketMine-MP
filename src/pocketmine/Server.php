@@ -638,7 +638,7 @@ class Server{
 	 * @return float
 	 */
 	public function getTickUsage(){
-		return round($this->maxUse * 100, 2);
+		return round($this->maxUse * 10, 2);
 	}
 
 	/**
@@ -647,7 +647,7 @@ class Server{
 	 * @return float
 	 */
 	public function getTickUsageAverage(){
-		return round((array_sum($this->useAverage) / count($this->useAverage)) * 100, 2);
+		return round((array_sum($this->useAverage) / count($this->useAverage)) * 10, 2);
 	}
 
 	/**
