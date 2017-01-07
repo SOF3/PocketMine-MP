@@ -25,13 +25,13 @@
 namespace pocketmine\plugin;
 
 use pocketmine\command\CommandExecutor;
-
+use pocketmine\Context;
 
 /**
  * It is recommended to use PluginBase for the actual plugin
  *
  */
-interface Plugin extends CommandExecutor{
+interface Plugin extends CommandExecutor, Context{
 
 	/**
 	 * Called when the plugin is loaded, before calling onEnable()
