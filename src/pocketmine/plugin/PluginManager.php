@@ -663,7 +663,9 @@ class PluginManager{
 			}
 
 			try{
-				$registration->callEvent($event);
+				$this->server->doInContext(function() use($registration, $event){
+					$registration->callEvent($event);
+				}, $registration->getPlugin());
 			}catch(\Throwable $e){
 				$this->server->getLogger()->critical(
 					$this->server->getLanguage()->translateString("pocketmine.plugin.eventError", [
