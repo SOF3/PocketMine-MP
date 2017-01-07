@@ -1,8 +1,13 @@
 #!/bin/bash
 echo Running PHP lint scans...
 shopt -s globstar
-for file in src/pocketmine/*.php src/pocketmine/**/*.php; do
-    OUTPUT=`php -l "$file"`
+
+function scanFile {
+    OUTPUT=`php -l "$1"`
     [ $? -ne 0 ] && echo -n "$OUTPUT" && exit 1
-done
+}
+
+for file in src/pocketmine/*.php src/pocketmine/**/*.php; do scanFile "$file"; done
+for file in als/**/*.php; do scanFile "$file"; done
+
 echo Lint scan completed successfully.

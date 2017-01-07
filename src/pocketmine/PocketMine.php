@@ -117,6 +117,7 @@ namespace pocketmine {
 	$autoloader = new CompatibleClassLoader();
 	$autoloader->addPath(\pocketmine\PATH . "src");
 	$autoloader->addPath(\pocketmine\PATH . "src" . DIRECTORY_SEPARATOR . "spl");
+	$autoloader->addPath(\pocketmine\PATH . "als");
 	$autoloader->register(true);
 
 	try{
