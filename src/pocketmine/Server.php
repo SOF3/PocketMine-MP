@@ -124,7 +124,7 @@ use pocketmine\utils\VersionString;
 /**
  * The class that manages everything
  */
-class Server{
+class Server implements Context{
 	const BROADCAST_CHANNEL_ADMINISTRATIVE = "pocketmine.broadcast.admin";
 	const BROADCAST_CHANNEL_USERS = "pocketmine.broadcast.user";
 
@@ -133,6 +133,9 @@ class Server{
 
 	/** @var \Threaded */
 	private static $sleeper = null;
+
+	/** @var ContextHolder|null */
+	private $context = null;
 
 	/** @var BanList */
 	private $banByName = null;
@@ -555,6 +558,7 @@ class Server{
 	 * @return \AttachableThreadedLogger
 	 */
 	public function getLogger(){
+		$this->testContext(Plugin::class);
 		return $this->logger;
 	}
 
@@ -2458,4 +2462,38 @@ class Server{
 		Tile::registerTile(Skull::class);
 	}
 
+	/**
+	 * @return Context|null
+	 */
+	public function getContext(){
+		return $this->context !== null ? $this->context->getContext() : null;
+	}
+
+	public function testContext(string $forbiddenSuperclass){
+		$ctx = $this->getContext();
+		if($ctx !== null && $ctx instanceof $forbiddenSuperclass){
+			throw new \RuntimeException("Permission denied to current context ({$ctx->getName()})");
+		}
+	}
+
+	public function lockContext(Context $ctx) : ContextHolder{
+		if($this->context !== null){
+			throw new \RuntimeException("Context already locked");
+		}
+
+		return $this->context = new ContextHolder($ctx);
+	}
+
+	public function unlockContext(ContextHolder $holder){
+		if($holder !== $this->context){
+			throw new \RuntimeException("ContextHolder does not match!");
+		}
+		$this->context = null;
+	}
+
+	public function doInContext(callable $callable, Context $ctx){
+		$holder = $this->lockContext($ctx);
+		$callable();
+		$this->unlockContext($holder);
+	}
 }
