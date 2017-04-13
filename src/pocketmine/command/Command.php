@@ -323,6 +323,7 @@ abstract class Command{
 	 * @param string $usage
 	 */
 	public function setUsage($usage){
+		$this->commandData["overloads"]["default"]["input"]["parameters"][0]["name"] = $usage;
 		$this->usageMessage = $usage;
 	}
 
