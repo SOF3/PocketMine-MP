@@ -251,7 +251,8 @@ class Item implements ItemIds, \JsonSerializable{
 		$creativeItems = new Config(Server::getInstance()->getFilePath() . "src/pocketmine/resources/creativeitems.json", Config::JSON, []);
 
 		foreach($creativeItems->getAll() as $data){
-			$item = Item::get($data["id"], $data["damage"], $data["count"], $data["nbt"]);
+			$id = constant(ItemIds::class . "::" . $data["id"]);
+			$item = Item::get($id, $data["damage"], $data["count"], $data["nbt"]);
 			if($item->getName() === "Unknown"){
 				continue;
 			}
