@@ -1,24 +1,24 @@
 [
     {
-        "id": 138,
+        "id": "BEACON",
         "damage": 0,
         "count": 1,
         "nbt": ""
     },
     {
-        "id": 66,
+        "id": "RAIL",
         "damage": 0,
         "count": 1,
         "nbt": ""
     },
     {
-        "id": 27,
+        "id": "POWERED_RAIL",
         "damage": 0,
         "count": 1,
         "nbt": ""
     },
     {
-        "id": 28,
+        "id": "DETECTOR_RAIL",
         "damage": 0,
         "count": 1,
         "nbt": ""
