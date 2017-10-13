@@ -30,6 +30,8 @@ use pocketmine\nbt\tag\ByteTag;
 use pocketmine\network\mcpe\protocol\AddEntityPacket;
 use pocketmine\network\mcpe\protocol\LevelEventPacket;
 use pocketmine\Player;
+use pocketmine\scheduler\TickableTask;
+use pocketmine\scheduler\TimeTickableConstraint;
 
 class PrimedTNT extends Entity implements Explosive{
 	const NETWORK_ID = 65;
@@ -102,14 +104,21 @@ class PrimedTNT extends Entity implements Explosive{
 	}
 
 	public function explode(){
-		$this->server->getPluginManager()->callEvent($ev = new ExplosionPrimeEvent($this, 4));
-
+		$this->server->getPluginManager()->callEvent($ev = new ExplosionPrimeEvent($this, 4, new TimeTickableConstraint(0.5)));
 		if(!$ev->isCancelled()){
 			$explosion = new Explosion($this, $ev->getForce(), $this);
-			if($ev->isBlockBreaking()){
-				$explosion->explodeA();
+
+			$constraint = $ev->getTickableConstraint();
+			if($constraint === null){
+				if($ev->isBlockBreaking()){
+					$explosion->explodeA();
+				}
+				$explosion->explodeB();
+			}else{
+				$generator = $ev->isBlockBreaking() ? $explosion->generateExplosions() : $explosion->generateExplodeB();
+				$task = new TickableTask($generator, $constraint);
+				$this->server->getScheduler()->scheduleRepeatingTask($task, $ev->getTickingPeriod());
 			}
-			$explosion->explodeB();
 		}
 	}
 

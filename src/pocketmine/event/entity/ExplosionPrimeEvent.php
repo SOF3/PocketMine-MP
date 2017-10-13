@@ -25,6 +25,7 @@ namespace pocketmine\event\entity;
 
 use pocketmine\entity\Entity;
 use pocketmine\event\Cancellable;
+use pocketmine\scheduler\TickableConstraint;
 
 /**
  * Called when a entity decides to explode
@@ -36,15 +37,23 @@ class ExplosionPrimeEvent extends EntityEvent implements Cancellable{
 	protected $force;
 	/** @var bool */
 	private $blockBreaking;
+	/** @var TickableConstraint|null */
+	private $tickableConstraint;
+	/** @var int */
+	private $tickingPeriod;
 
 	/**
-	 * @param Entity $entity
-	 * @param float  $force
+	 * @param Entity                  $entity
+	 * @param float                   $force
+	 * @param null|TickableConstraint $tickableConstraint
+	 * @param int                     $tickingPeriod
 	 */
-	public function __construct(Entity $entity, float $force){
+	public function __construct(Entity $entity, float $force, ?TickableConstraint $tickableConstraint = null, int $tickingPeriod = 1){
 		$this->entity = $entity;
 		$this->force = $force;
 		$this->blockBreaking = true;
+		$this->tickableConstraint = $tickableConstraint;
+		$this->tickingPeriod = $tickingPeriod;
 	}
 
 	/**
@@ -72,4 +81,19 @@ class ExplosionPrimeEvent extends EntityEvent implements Cancellable{
 		$this->blockBreaking = $affectsBlocks;
 	}
 
+	public function getTickableConstraint() : ?TickableConstraint{
+		return $this->tickableConstraint;
+	}
+
+	public function setTickableConstraint(?TickableConstraint $tickableConstraint){
+		$this->tickableConstraint = $tickableConstraint;
+	}
+
+	public function getTickingPeriod() : int{
+		return $this->tickingPeriod;
+	}
+
+	public function setTickingPeriod(int $tickingPeriod){
+		$this->tickingPeriod = $tickingPeriod;
+	}
 }

@@ -288,6 +288,7 @@ class Utils{
 
 	/**
 	 * @param bool $recalculate
+	 *
 	 * @return int
 	 */
 	public static function getCoreCount(bool $recalculate = false) : int{
@@ -413,7 +414,7 @@ class Utils{
 		try{
 			list($ret, $headers, $httpCode) = self::simpleCurl($page, $timeout, $extraHeaders, [
 				CURLOPT_POST => 1,
-				CURLOPT_POSTFIELDS => $args
+				CURLOPT_POSTFIELDS => $args,
 			]);
 			return $ret;
 		}catch(\RuntimeException $ex){
@@ -445,18 +446,18 @@ class Utils{
 		$ch = curl_init($page);
 
 		curl_setopt_array($ch, $extraOpts + [
-			CURLOPT_SSL_VERIFYPEER => false,
-			CURLOPT_SSL_VERIFYHOST => 2,
-			CURLOPT_FORBID_REUSE => 1,
-			CURLOPT_FRESH_CONNECT => 1,
-			CURLOPT_AUTOREFERER => true,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_CONNECTTIMEOUT_MS => (int) ($timeout * 1000),
-			CURLOPT_TIMEOUT_MS => (int) ($timeout * 1000),
-			CURLOPT_HTTPHEADER => array_merge(["User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0 " . \pocketmine\NAME], $extraHeaders),
-			CURLOPT_HEADER => true
-		]);
+				CURLOPT_SSL_VERIFYPEER => false,
+				CURLOPT_SSL_VERIFYHOST => 2,
+				CURLOPT_FORBID_REUSE => 1,
+				CURLOPT_FRESH_CONNECT => 1,
+				CURLOPT_AUTOREFERER => true,
+				CURLOPT_FOLLOWLOCATION => true,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_CONNECTTIMEOUT_MS => (int) ($timeout * 1000),
+				CURLOPT_TIMEOUT_MS => (int) ($timeout * 1000),
+				CURLOPT_HTTPHEADER => array_merge(["User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0 " . \pocketmine\NAME], $extraHeaders),
+				CURLOPT_HEADER => true,
+			]);
 		try{
 			$raw = curl_exec($ch);
 			$error = curl_error($ch);
@@ -518,7 +519,7 @@ class Utils{
 		$process = proc_open($command, [
 			["pipe", "r"],
 			["pipe", "w"],
-			["pipe", "w"]
+			["pipe", "w"],
 		], $pipes);
 
 		if($process === false){
@@ -542,5 +543,21 @@ class Utils{
 		list($headB64, $payloadB64, $sigB64) = explode(".", $token);
 
 		return json_decode(base64_decode(strtr($payloadB64, '-_', '+/'), true), true);
+	}
+
+	/**
+	 * Forces the passed Generator to finish executing and return its real value.
+	 *
+	 * Wrapping this method around a generator function call is functionally equivalent to calling a no-yield version of that function.
+	 *
+	 * @param \Generator $generator
+	 *
+	 * @return mixed
+	 */
+	public static function consumeGenerator(\Generator $generator){
+		while($generator->valid()){
+			$generator->next();
+		}
+		return $generator->getReturn();
 	}
 }

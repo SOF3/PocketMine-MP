@@ -25,10 +25,10 @@ class TimeTickableConstraint implements TickableConstraint{
 	private $tempTime;
 
 	/**
-	 * @param float $seconds The duration to execute in each tick (in seconds)
+	 * @param float $ticks The duration to execute in each tick, in ticks. Passing 0.3 implies that ideally 30% of a tick is allocated to executing this task. Passing a value greater than 1 may cause server overloading.
 	 */
-	public function __construct(float $seconds){
-		$this->seconds = $seconds;
+	public function __construct(float $ticks){
+		$this->seconds = $ticks / 20;
 	}
 
 	public function reset() : void{

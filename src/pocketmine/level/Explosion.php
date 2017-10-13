@@ -43,6 +43,7 @@ use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
 use pocketmine\tile\Chest;
 use pocketmine\tile\Container;
 use pocketmine\tile\Tile;
+use pocketmine\utils\Utils;
 
 class Explosion{
 
@@ -65,10 +66,38 @@ class Explosion{
 		$this->what = $what;
 	}
 
-	/**
-	 * @return bool
-	 */
 	public function explodeA() : bool{
+		return Utils::consumeGenerator($this->generateExplodeA());
+	}
+
+	public function explodeB() : bool{
+		return Utils::consumeGenerator($this->generateExplodeB());
+	}
+
+	/**
+	 * Returns a {@link \Generator} that:
+	 * <ol>
+	 * <li>Executes {@link Explosion::explodeA()} and yields each affected block</li>
+	 * <li>Yields a <code>null</code> to indicate explodeA() has completed</li>
+	 * <li>Executes {@link Explosion::explodeB()} and yields each affected block</li>
+	 * <li>{@link \Generator::getReturn() Returns} a boolean whether <em>both</em> explodeA() and explodeB() return a true value.</li>
+	 * </ol>
+	 *
+	 * @return \Generator|Position[]|null[]|Entity[]|Block[]|bool
+	 */
+	public function generateExplosions() : \Generator{
+		yield from $a = $this->generateExplodeA();
+		yield null;
+		yield from $b = $this->generateExplodeB();
+		return $a->getReturn() && $b->getReturn();
+	}
+
+	/**
+	 * Returns a {@link \Generator} that executes {@link Explosion::explodeA()} and yields each affected block
+	 *
+	 * @return \Generator|Position[]|bool a generator that yields {@link Position} objects and returns a boolean after completion
+	 */
+	public function generateExplodeA(){
 		if($this->size < 0.1){
 			return false;
 		}
@@ -135,6 +164,8 @@ class Explosion{
 							$pointerX += $vector->x;
 							$pointerY += $vector->y;
 							$pointerZ += $vector->z;
+
+							yield $vBlock;
 						}
 					}
 				}
@@ -144,7 +175,13 @@ class Explosion{
 		return true;
 	}
 
-	public function explodeB() : bool{
+	/**
+	 * Returns a {@link \Generator} that executes {@link Explosion::explodeB()} and yields each affected entity, then each affected block.
+	 *
+	 * @return \Generator|Entity[]|Block[]|bool a generator that yields {@link Entity} objects, then {@link Block} objects, and returns a boolean after completion
+	 * @throws \TypeError
+	 */
+	public function generateExplodeB(){
 		$send = [];
 		$updateBlocks = [];
 
@@ -193,6 +230,8 @@ class Explosion{
 				$entity->attack($ev);
 				$entity->setMotion($motion->multiply($impact));
 			}
+
+			yield $entity;
 		}
 
 
@@ -245,6 +284,8 @@ class Explosion{
 				}
 			}
 			$send[] = new Vector3($block->x - $source->x, $block->y - $source->y, $block->z - $source->z);
+
+			yield $block;
 		}
 
 		$pk = new ExplodePacket();
