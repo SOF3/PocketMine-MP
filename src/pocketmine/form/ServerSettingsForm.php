@@ -24,20 +24,54 @@ declare(strict_types=1);
 namespace pocketmine\form;
 
 use pocketmine\form\element\CustomFormElement;
+use pocketmine\network\mcpe\protocol\ServerSettingsResponsePacket;
+use pocketmine\Player;
 
 /**
  * Represents a custom form which can be shown in the Settings menu on the client. This is exactly the same as a regular
  * CustomForm, except that this type can also have an icon which can be shown on the settings section button.
  */
-abstract class ServerSettingsForm extends CustomForm{
+class ServerSettingsForm implements \JsonSerializable{
+	/** @var string */
+	private $title;
+
 	/**
 	 * @var FormIcon|null
 	 */
-	private $icon;
+	private $icon = null;
 
-	public function __construct(string $title, ?FormIcon $icon, CustomFormElement ...$elements){
-		parent::__construct($title, ...$elements);
-		$this->icon = $icon;
+	/** @var ServerSettingsAttachment[] */
+	private $attachments = [];
+
+	/** @var CustomFormElement[] */
+	private $elementIndex = [];
+
+	public function __construct(string $title){
+		$this->title = $title;
+	}
+
+	public function getTitle() : string{
+		return $this->title;
+	}
+
+	public function setTitle(string $title) : void{
+		$this->title = $title;
+	}
+
+	public function addAttachment(ServerSettingsAttachment $attachment){
+		$this->attachments[spl_object_hash($attachment)] = $attachment;
+	}
+
+	public function getAttachments() : array{
+		return $this->attachments;
+	}
+
+	public function removeAttachment(ServerSettingsAttachment $attachment){
+		$key = spl_object_hash($attachment);
+		if(!isset($this->attachments[$key])){
+			throw new \InvalidArgumentException("The provided ServerSettingsAttachment has not been added to this form");
+		}
+		unset($this->attachments[$key]);
 	}
 
 	public function hasIcon() : bool{
@@ -48,8 +82,26 @@ abstract class ServerSettingsForm extends CustomForm{
 		return $this->icon;
 	}
 
-	public function serializeFormData() : array{
-		$data = parent::serializeFormData();
+	public function setIcon(?FormIcon $icon) : void{
+		$this->icon = $icon;
+	}
+
+	public function jsonSerialize() : array{
+		usort($this->attachments, function(ServerSettingsAttachment $a, ServerSettingsAttachment $b){
+			return $b->getPriority() <=> $a->getPriority(); // note that this is ($b <=> $a) not ($a <=> $b)
+		});
+		$content = [];
+		foreach($this->attachments as $attachment){
+			foreach($attachment->getElements() as $element){
+				$content[] = $element;
+			}
+		}
+
+		$data = [
+			"type" => Form::TYPE_CUSTOM_FORM,
+			"title" => $this->title,
+			"content" => $content
+		];
 
 		if($this->hasIcon()){
 			$data["icon"] = $this->icon;
@@ -58,4 +110,9 @@ abstract class ServerSettingsForm extends CustomForm{
 		return $data;
 	}
 
+	public function onSubmit($data) : void{
+		if(is_array($data)){
+
+		}
+	}
 }

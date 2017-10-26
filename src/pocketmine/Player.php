@@ -67,11 +67,13 @@ use pocketmine\event\player\PlayerToggleFlightEvent;
 use pocketmine\event\player\PlayerToggleSneakEvent;
 use pocketmine\event\player\PlayerToggleSprintEvent;
 use pocketmine\event\player\PlayerTransferEvent;
+use pocketmine\event\player\ServerSettingsPopulationEvent;
 use pocketmine\event\server\DataPacketSendEvent;
 use pocketmine\event\TextContainer;
 use pocketmine\event\Timings;
 use pocketmine\event\TranslationContainer;
 use pocketmine\form\Form;
+use pocketmine\form\ServerSettingsForm;
 use pocketmine\inventory\BigCraftingGrid;
 use pocketmine\inventory\CraftingGrid;
 use pocketmine\inventory\Inventory;
@@ -135,6 +137,7 @@ use pocketmine\network\mcpe\protocol\ResourcePackDataInfoPacket;
 use pocketmine\network\mcpe\protocol\ResourcePacksInfoPacket;
 use pocketmine\network\mcpe\protocol\ResourcePackStackPacket;
 use pocketmine\network\mcpe\protocol\RespawnPacket;
+use pocketmine\network\mcpe\protocol\ServerSettingsResponsePacket;
 use pocketmine\network\mcpe\protocol\SetPlayerGameTypePacket;
 use pocketmine\network\mcpe\protocol\SetSpawnPositionPacket;
 use pocketmine\network\mcpe\protocol\SetTitlePacket;
@@ -306,6 +309,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	protected $sentForm = null;
 	/** @var Form[] */
 	protected $formQueue = [];
+	protected $settingsForm = null;
 
 	/**
 	 * @return TranslationContainer|string
@@ -3343,6 +3347,14 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 		$this->sentFormId = $id;
 		$this->sentForm = $form;
+	}
+
+	public function onSettingsRequest() : bool{
+		$form = new ServerSettingsForm($this->server->getName());
+		$this->server->getPluginManager()->callEvent(new ServerSettingsPopulationEvent($this, $form));
+		$pk = new ServerSettingsResponsePacket();
+		$pk->formId = $this->formIdCounter++;
+		return true;
 	}
 
 	/**
