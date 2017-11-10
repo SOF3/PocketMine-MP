@@ -41,9 +41,15 @@ abstract class Form implements \JsonSerializable{
 	protected $title = "";
 	/** @var bool */
 	private $queued = false;
+	/** @var FormSubmitHandler|null */
+	private $submitHandler;
+	/** @var FormCloseHandler|null */
+	private $closeHandler;
 
-	public function __construct(string $title){
+	public function __construct(string $title, ?FormSubmitHandler $submitHandler = null, ?FormCloseHandler $closeHandler = null){
 		$this->title = $title;
+		$this->submitHandler = $submitHandler;
+		$this->closeHandler = $closeHandler;
 	}
 
 	/**
@@ -75,13 +81,42 @@ abstract class Form implements \JsonSerializable{
 	 * Called when a player submits this form. Each form type usually has its own methods for getting relevant data from
 	 * them.
 	 *
-	 * Plugins should extend the class and override this function and add their own code to handle form responses as
-	 * they wish.
+	 * Plugins should either override this method or pass a {@link FormHandler} in the <code>$submitHandler</code>
+	 * argument of the {@link Form::__construct constructor} to handle form submission. If this method is not overridden
+	 * and null is passed, nothing will happen and null is returned.
+	 *
+	 * @param Player $player
+	 * @return Form|null a form which will be opened immediately (before queued forms) as a response to this form,
+	 * or null if not applicable.
+	 */
+	protected function onSubmit(Player $player) : ?Form{
+		if($this->submitHandler !== null){
+			return $this->submitHandler->onSubmit($this, $player);
+		}
+		return null;
+	}
+
+	/**
+	 * Called when a player clicks the close button on this form without submitting it.
+	 *
+	 * Plugins should either override this method or pass a {@link FormHandler} in the <code>$closeHandler</code>
+	 * argument of the form constructor to handle form submission. If this method is not overridden and null is passed,
+	 * nothing will happen and null is returned.
+	 *
+	 * This method <strong>does not</strong> close the form for a player.
 	 *
 	 * @param Player $player
 	 * @return Form|null a form which will be opened immediately (before queued forms) as a response to this form, or null if not applicable.
 	 */
-	abstract public function onSubmit(Player $player) : ?Form;
+	protected function onClose(Player $player) : ?Form{
+		assert($this->isCloseable(), get_class($this) . " cannot be closed");
+		if($this->closeHandler !== null){
+			return $this->closeHandler->onClose($this, $player);
+		}
+		return null;
+	}
+
+	abstract public function isCloseable() : bool;
 
 	/**
 	 * Returns whether the form has already been sent to a player or not. Note that you cannot send the form again if

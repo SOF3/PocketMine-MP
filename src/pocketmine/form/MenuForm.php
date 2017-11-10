@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace pocketmine\form;
 
 use pocketmine\Player;
+use pocketmine\utils\Utils;
 
 /**
  * This form type presents a menu to the user with a list of options on it. The user may select an option or close the
@@ -40,12 +41,15 @@ abstract class MenuForm extends Form{
 	private $selectedOption;
 
 	/**
-	 * @param string       $title
-	 * @param string       $text
-	 * @param MenuOption[] $options
+	 * @param string                 $title
+	 * @param string                 $text
+	 * @param MenuOption[]           $options
+	 * @param null|FormSubmitHandler $submitHandler
+	 * @param null|FormCloseHandler  $closeHandler
 	 */
-	public function __construct(string $title, string $text, MenuOption ...$options){
-		parent::__construct($title);
+	public function __construct(string $title, string $text, array $options, ?FormSubmitHandler $submitHandler = null, ?FormCloseHandler $closeHandler = null){
+		assert(Utils::validateObjectArray($options, MenuOption::class));
+		parent::__construct($title, $submitHandler, $closeHandler);
 		$this->content = $text;
 		$this->options = $options;
 	}
@@ -100,17 +104,12 @@ abstract class MenuForm extends Form{
 	 *
 	 * {@link getSelectedOption} can be used to get the option selected by the user.
 	 */
-	public function onSubmit(Player $player) : ?Form{
-		return null;
+	protected function onSubmit(Player $player) : ?Form{
+		return parent::onSubmit($player);
 	}
 
-	/**
-	 * Called when a player clicks the close button on this form without selecting an option.
-	 * @param Player $player
-	 * @return Form|null a form which will be opened immediately (before queued forms) as a response to this form, or null if not applicable.
-	 */
-	public function onClose(Player $player) : ?Form{
-		return null;
+	final public function isCloseable() : bool{
+		return true;
 	}
 
 	public function clearResponseData() : void{

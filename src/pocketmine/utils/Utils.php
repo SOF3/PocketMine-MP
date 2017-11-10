@@ -543,4 +543,22 @@ class Utils{
 
 		return json_decode(base64_decode(strtr($payloadB64, '-_', '+/'), true), true);
 	}
+
+	public static function validateObjectArray(array $array, string $class) : bool{
+		foreach($array as $item){
+			if(!($item instanceof $class)){
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public static function validateScalarArray(array $array, string $type) : bool{
+		foreach($array as $item){
+			if(gettype($item) !== $type){
+				return false;
+			}
+		}
+		return true;
+	}
 }

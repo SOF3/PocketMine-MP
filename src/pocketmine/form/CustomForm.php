@@ -25,6 +25,7 @@ namespace pocketmine\form;
 
 use pocketmine\form\element\CustomFormElement;
 use pocketmine\Player;
+use pocketmine\utils\Utils;
 
 abstract class CustomForm extends Form{
 
@@ -32,11 +33,14 @@ abstract class CustomForm extends Form{
 	private $elements;
 
 	/**
-	 * @param string              $title
-	 * @param CustomFormElement[] ...$elements
+	 * @param string                 $title
+	 * @param CustomFormElement[]    $elements
+	 * @param null|FormSubmitHandler $submitHandler
+	 * @param null|FormCloseHandler  $closeHandler
 	 */
-	public function __construct(string $title, CustomFormElement ...$elements){
-		parent::__construct($title);
+	public function __construct(string $title, array $elements, ?FormSubmitHandler $submitHandler = null, ?FormCloseHandler $closeHandler = null){
+		assert(Utils::validateObjectArray($elements, CustomFormElement::class));
+		parent::__construct($title, $submitHandler, $closeHandler);
 		$this->elements = $elements;
 	}
 
@@ -63,20 +67,6 @@ abstract class CustomForm extends Form{
 		return $this->elements;
 	}
 
-	public function onSubmit(Player $player) : ?Form{
-		return null;
-	}
-
-	/**
-	 * Called when a player closes the form without submitting it.
-	 * @param Player $player
-	 * @return Form|null a form which will be opened immediately (before queued forms) as a response to this form, or null if not applicable.
-	 */
-	public function onClose(Player $player) : ?Form{
-		return null;
-	}
-
-
 	public function handleResponse(Player $player, $data) : ?Form{
 		if($data === null){
 			return $this->onClose($player);
@@ -92,6 +82,10 @@ abstract class CustomForm extends Form{
 		}
 
 		throw new \UnexpectedValueException("Expected array or NULL, got " . gettype($data));
+	}
+
+	final public function isCloseable() : bool{
+		return true;
 	}
 
 	public function serializeFormData() : array{

@@ -41,13 +41,15 @@ abstract class ModalForm extends Form{
 	private $choice;
 
 	/**
-	 * @param string $title Text to put on the title of the dialog.
-	 * @param string $text Text to put in the body.
-	 * @param string $yesButtonText Text to show on the "Yes" button. Defaults to client-translated "Yes" string.
-	 * @param string $noButtonText Text to show on the "No" button. Defaults to client-translated "No" string.
+	 * @param string                 $title         Text to put on the title of the dialog.
+	 * @param string                 $text          Text to put in the body.
+	 * @param string                 $yesButtonText Text to show on the "Yes" button. Defaults to client-translated "Yes" string.
+	 * @param string                 $noButtonText  Text to show on the "No" button. Defaults to client-translated "No" string.
+	 * @param null|FormSubmitHandler $submitHandler
+	 * @param null|FormCloseHandler  $closeHandler
 	 */
-	public function __construct(string $title, string $text, string $yesButtonText = "gui.yes", string $noButtonText = "gui.no"){
-		parent::__construct($title);
+	public function __construct(string $title, string $text, string $yesButtonText = "gui.yes", string $noButtonText = "gui.no", ?FormSubmitHandler $submitHandler = null, ?FormCloseHandler $closeHandler = null){
+		parent::__construct($title, $submitHandler, $closeHandler);
 		$this->content = $text;
 		$this->button1 = $yesButtonText;
 		$this->button2 = $noButtonText;
@@ -90,8 +92,12 @@ abstract class ModalForm extends Form{
 	 *
 	 * {@link getChoice} can be used in here to find out which option the player selected.
 	 */
-	public function onSubmit(Player $player) : ?Form{
-		return null;
+	protected function onSubmit(Player $player) : ?Form{
+		return parent::onSubmit($player);
+	}
+
+	final public function isCloseable() : bool{
+		return false;
 	}
 
 	public function clearResponseData() : void{
