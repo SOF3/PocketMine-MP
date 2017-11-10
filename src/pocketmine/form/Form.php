@@ -31,7 +31,7 @@ use pocketmine\Player;
 /**
  * Base class for a custom form. Forms are serialized to JSON data to be sent to clients.
  */
-abstract class Form implements \JsonSerializable{
+abstract class Form implements \JsonSerializable, FormSubmitHandler{
 
 	const TYPE_MODAL = "modal";
 	const TYPE_MENU = "form";
@@ -41,15 +41,17 @@ abstract class Form implements \JsonSerializable{
 	protected $title = "";
 	/** @var bool */
 	private $queued = false;
-	/** @var FormSubmitHandler|null */
+	/** @var FormSubmitHandler */
 	private $submitHandler;
-	/** @var FormCloseHandler|null */
-	private $closeHandler;
 
-	public function __construct(string $title, ?FormSubmitHandler $submitHandler = null, ?FormCloseHandler $closeHandler = null){
+	/**
+	 * Form constructor.
+	 * @param string                 $title Title of the form.
+	 * @param null|FormSubmitHandler $submitHandler The handler when this form is submitted. If null is passed, {@link Form::onSubmit() this form} will be used as the handler.
+	 */
+	public function __construct(string $title, ?FormSubmitHandler $submitHandler = null){
 		$this->title = $title;
-		$this->submitHandler = $submitHandler;
-		$this->closeHandler = $closeHandler;
+		$this->submitHandler = $submitHandler ?? $this;
 	}
 
 	/**
@@ -78,45 +80,26 @@ abstract class Form implements \JsonSerializable{
 	abstract public function handleResponse(Player $player, $data) : ?Form;
 
 	/**
-	 * Called when a player submits this form. Each form type usually has its own methods for getting relevant data from
-	 * them.
-	 *
-	 * Plugins should either override this method or pass a {@link FormHandler} in the <code>$submitHandler</code>
-	 * argument of the {@link Form::__construct constructor} to handle form submission. If this method is not overridden
-	 * and null is passed, nothing will happen and null is returned.
-	 *
-	 * @param Player $player
-	 * @return Form|null a form which will be opened immediately (before queued forms) as a response to this form,
-	 * or null if not applicable.
+	 * @return FormSubmitHandler
 	 */
-	protected function onSubmit(Player $player) : ?Form{
-		if($this->submitHandler !== null){
-			return $this->submitHandler->onSubmit($this, $player);
-		}
-		return null;
+	public function getSubmitHandler() : FormSubmitHandler{
+		return $this->submitHandler;
 	}
 
 	/**
-	 * Called when a player clicks the close button on this form without submitting it.
-	 *
-	 * Plugins should either override this method or pass a {@link FormHandler} in the <code>$closeHandler</code>
-	 * argument of the form constructor to handle form submission. If this method is not overridden and null is passed,
-	 * nothing will happen and null is returned.
-	 *
-	 * This method <strong>does not</strong> close the form for a player.
-	 *
-	 * @param Player $player
-	 * @return Form|null a form which will be opened immediately (before queued forms) as a response to this form, or null if not applicable.
+	 * @param FormSubmitHandler|null $submitHandler
 	 */
-	protected function onClose(Player $player) : ?Form{
-		assert($this->isCloseable(), get_class($this) . " cannot be closed");
-		if($this->closeHandler !== null){
-			return $this->closeHandler->onClose($this, $player);
-		}
+	public function setSubmitHandler(?FormSubmitHandler $submitHandler) : void{
+		$this->submitHandler = $submitHandler ?? $this;
+	}
+
+	public function onSubmit(Form $form, Player $player) : ?Form{
 		return null;
 	}
 
-	abstract public function isCloseable() : bool;
+	public function onClose(Form $form, Player $player) : ?Form{
+		return null;
+	}
 
 	/**
 	 * Returns whether the form has already been sent to a player or not. Note that you cannot send the form again if

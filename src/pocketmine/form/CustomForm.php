@@ -27,16 +27,14 @@ use pocketmine\form\element\CustomFormElement;
 use pocketmine\Player;
 use pocketmine\utils\Utils;
 
-abstract class CustomForm extends Form{
+abstract class CustomForm extends CloseableForm{
 
 	/** @var CustomFormElement[] */
 	private $elements;
 
 	/**
-	 * @param string                 $title
+	 * {@inheritdoc}
 	 * @param CustomFormElement[]    $elements
-	 * @param null|FormSubmitHandler $submitHandler
-	 * @param null|FormCloseHandler  $closeHandler
 	 */
 	public function __construct(string $title, array $elements, ?FormSubmitHandler $submitHandler = null, ?FormCloseHandler $closeHandler = null){
 		assert(Utils::validateObjectArray($elements, CustomFormElement::class));
@@ -69,7 +67,7 @@ abstract class CustomForm extends Form{
 
 	public function handleResponse(Player $player, $data) : ?Form{
 		if($data === null){
-			return $this->onClose($player);
+			return $this->getCloseHandler()->onClose($this, $player);
 		}
 
 		if(is_array($data)){
@@ -78,14 +76,10 @@ abstract class CustomForm extends Form{
 				$this->elements[$index]->setValue($value);
 			}
 
-			return $this->onSubmit($player);
+			return $this->getSubmitHandler()->onSubmit($this, $player);
 		}
 
 		throw new \UnexpectedValueException("Expected array or NULL, got " . gettype($data));
-	}
-
-	final public function isCloseable() : bool{
-		return true;
 	}
 
 	public function serializeFormData() : array{

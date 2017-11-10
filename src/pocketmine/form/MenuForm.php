@@ -30,7 +30,7 @@ use pocketmine\utils\Utils;
  * This form type presents a menu to the user with a list of options on it. The user may select an option or close the
  * form by clicking the X in the top left corner.
  */
-abstract class MenuForm extends Form{
+abstract class MenuForm extends CloseableForm{
 
 	/** @var string */
 	protected $content;
@@ -41,11 +41,9 @@ abstract class MenuForm extends Form{
 	private $selectedOption;
 
 	/**
-	 * @param string                 $title
+	 * {@inheritdoc}
 	 * @param string                 $text
 	 * @param MenuOption[]           $options
-	 * @param null|FormSubmitHandler $submitHandler
-	 * @param null|FormCloseHandler  $closeHandler
 	 */
 	public function __construct(string $title, string $text, array $options, ?FormSubmitHandler $submitHandler = null, ?FormCloseHandler $closeHandler = null){
 		assert(Utils::validateObjectArray($options, MenuOption::class));
@@ -104,12 +102,8 @@ abstract class MenuForm extends Form{
 	 *
 	 * {@link getSelectedOption} can be used to get the option selected by the user.
 	 */
-	protected function onSubmit(Player $player) : ?Form{
-		return parent::onSubmit($player);
-	}
-
-	final public function isCloseable() : bool{
-		return true;
+	public function onSubmit(Form $form, Player $player) : ?Form{
+		return null;
 	}
 
 	public function clearResponseData() : void{
@@ -119,7 +113,7 @@ abstract class MenuForm extends Form{
 
 	final public function handleResponse(Player $player, $data) : ?Form{
 		if($data === null){
-			return $this->onClose($player);
+			return $this->getCloseHandler()->onClose($this, $player);
 		}
 
 		if(is_int($data)){
@@ -127,7 +121,7 @@ abstract class MenuForm extends Form{
 				throw new \RuntimeException($player->getName() . " selected an option that doesn't seem to exist ($data)");
 			}
 			$this->setSelectedOptionIndex($data);
-			return $this->onSubmit($player);
+			return $this->getSubmitHandler()->onSubmit($this, $player);
 		}
 
 		throw new \UnexpectedValueException("Expected int or NULL, got " . gettype($data));
