@@ -3287,10 +3287,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 *
 	 * @param Form $form
 	 * @param bool $prepend if true, the form will be sent immediately after the current form is closed (if any), before other queued forms.
+	 * @throws \InvalidStateException if the form has already been discarded.
 	 */
 	public function sendForm(Form $form, bool $prepend = false) : void{
 		if($form->hasBeenQueued()){
-			throw new \InvalidArgumentException("Cannot queue to send the same form more than once, create a new one instead");
+			throw new \InvalidStateException("Cannot queue to send the same form more than once, create a new one instead");
 		}
 		$form->setHasBeenQueued();
 
@@ -3314,12 +3315,14 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		try{
 			$form = $this->sentForm->handleResponse($this, $responseData);
 			if($form !== null){
+				if($form->hasBeenQueued()){
+					throw new \InvalidStateException("Cannot queue to send the same form more than once, create a new one instead");
+				}
 				$this->sendFormRequestPacket($form);
 				return true;
 			}
 		}catch(\Throwable $e){
 			$this->server->getLogger()->logException($e);
-			return true;
 		}finally{
 			$this->sentFormId = null;
 			$this->sentForm = null;
