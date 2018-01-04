@@ -29,6 +29,7 @@ use pocketmine\command\SimpleCommandMap;
 use pocketmine\event\Event;
 use pocketmine\event\EventPriority;
 use pocketmine\event\HandlerList;
+use pocketmine\event\LateEvent;
 use pocketmine\event\Listener;
 use pocketmine\event\Timings;
 use pocketmine\event\TimingsHandler;
@@ -82,6 +83,11 @@ class PluginManager{
 	 * @var Permissible[]
 	 */
 	protected $defSubsOp = [];
+
+	/**
+	 * @var LateEvent[]
+	 */
+	protected $executingLateEvents = [];
 
 	/**
 	 * @var PluginLoader[]
@@ -706,29 +712,52 @@ class PluginManager{
 		$this->defaultPermsOp = [];
 	}
 
+	public function tickLateEvents() : void{
+		foreach($this->executingLateEvents as $hash => $event){
+			if(!$event->isCompleted()){
+				$event->checkTimeout();
+			}
+			if($event->isCompleted()){ // event may be set complete in checkTimeout()
+				unset($this->executingLateEvents[$hash]);
+				$event->onCompletion();
+			}
+		}
+	}
+
 	/**
 	 * Calls an event
 	 *
 	 * @param Event $event
 	 */
 	public function callEvent(Event $event){
-		foreach(HandlerList::getHandlerListsFor(get_class($event)) as $handlerList){
-			foreach($handlerList->getRegisteredListeners() as $registration){
-				if(!$registration->getPlugin()->isEnabled()){
-					continue;
+		if($event instanceof LateEvent){
+			$listeners = [];
+			foreach(HandlerList::getHandlerListsFor(get_class($event)) as $handlerList){
+				foreach($handlerList->getRegisteredListeners() as $listener){
+					$listeners[] = $listener;
 				}
+			}
+			$event->setCallQueue($listeners);
+			$this->executingLateEvents[spl_object_hash($event)] = $event;
+		}else{
+			foreach(HandlerList::getHandlerListsFor(get_class($event)) as $handlerList){
+				foreach($handlerList->getRegisteredListeners() as $registration){
+					if(!$registration->getPlugin()->isEnabled()){
+						continue;
+					}
 
-				try{
-					$registration->callEvent($event);
-				}catch(\Throwable $e){
-					$this->server->getLogger()->critical(
-						$this->server->getLanguage()->translateString("pocketmine.plugin.eventError", [
-							$event->getEventName(),
-							$registration->getPlugin()->getDescription()->getFullName(),
-							$e->getMessage(),
-							get_class($registration->getListener())
-						]));
-					$this->server->getLogger()->logException($e);
+					try{
+						$registration->callEvent($event);
+					}catch(\Throwable $e){
+						$this->server->getLogger()->critical(
+							$this->server->getLanguage()->translateString("pocketmine.plugin.eventError", [
+								$event->getEventName(),
+								$registration->getPlugin()->getDescription()->getFullName(),
+								$e->getMessage(),
+								get_class($registration->getListener())
+							]));
+						$this->server->getLogger()->logException($e);
+					}
 				}
 			}
 		}
@@ -765,11 +794,12 @@ class PluginManager{
 				$priority = isset($tags["priority"]) && defined(EventPriority::class . "::" . strtoupper($tags["priority"])) ?
 					constant(EventPriority::class . "::" . strtoupper($tags["priority"])) : EventPriority::NORMAL;
 				$ignoreCancelled = isset($tags["ignoreCancelled"]) && strtolower($tags["ignoreCancelled"]) === "true";
+				$timeout = isset($tags["timeout"]) ? (float) $tags["timeout"] : 5.0;
 
 				$parameters = $method->getParameters();
 				if(count($parameters) === 1 and $parameters[0]->getClass() instanceof \ReflectionClass and is_subclass_of($parameters[0]->getClass()->getName(), Event::class)){
 					$class = $parameters[0]->getClass()->getName();
-					$this->registerEvent($class, $listener, $priority, new MethodEventExecutor($method->getName()), $plugin, $ignoreCancelled);
+					$this->registerEvent($class, $listener, $priority, new MethodEventExecutor($method->getName()), $plugin, $ignoreCancelled, $timeout);
 				}
 			}
 		}
@@ -782,10 +812,12 @@ class PluginManager{
 	 * @param EventExecutor $executor
 	 * @param Plugin        $plugin
 	 * @param bool          $ignoreCancelled
+	 * @param float         $timeout
 	 *
-	 * @throws PluginException
+	 * @throws \Exception
+	 * @throws \ReflectionException
 	 */
-	public function registerEvent(string $event, Listener $listener, int $priority, EventExecutor $executor, Plugin $plugin, bool $ignoreCancelled = false) : void{
+	public function registerEvent(string $event, Listener $listener, int $priority, EventExecutor $executor, Plugin $plugin, bool $ignoreCancelled = false, float $timeout = 5.0) : void{
 		if(!is_subclass_of($event, Event::class)){
 			throw new PluginException($event . " is not an Event");
 		}
@@ -798,6 +830,7 @@ class PluginManager{
 				get_class($listener) . "->" . ($executor instanceof MethodEventExecutor ? $executor->getMethod() : "<unknown>")
 			]));
 		}
+		$late = is_subclass_of($event, LateEvent::class);
 
 
 		if(!$plugin->isEnabled()){
@@ -806,7 +839,10 @@ class PluginManager{
 
 		$timings = new TimingsHandler("Plugin: " . $plugin->getDescription()->getFullName() . " Event: " . get_class($listener) . "::" . ($executor instanceof MethodEventExecutor ? $executor->getMethod() : "???") . "(" . (new \ReflectionClass($event))->getShortName() . ")", self::$pluginParentTimer);
 
-		$this->getEventListeners($event)->register(new RegisteredListener($listener, $executor, $priority, $plugin, $ignoreCancelled, $timings));
+		$this->getEventListeners($event)->register($late ?
+			new LateRegisteredListener($listener, $executor, $priority, $plugin, $ignoreCancelled, $timings, $timeout) :
+			new RegisteredListener($listener, $executor, $priority, $plugin, $ignoreCancelled, $timings)
+		);
 	}
 
 	/**

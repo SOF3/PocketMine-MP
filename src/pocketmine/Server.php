@@ -2406,6 +2406,8 @@ class Server{
 				$this->logger->logException($e);
 			}
 		}
+
+		$this->pluginManager->tickLateEvents();
 	}
 
 	public function doAutoSave(){
