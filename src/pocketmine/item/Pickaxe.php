@@ -21,21 +21,25 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\nbt\tag;
+namespace pocketmine\item;
 
-use pocketmine\nbt\NBT;
+use pocketmine\block\BlockToolType;
 
-class EndTag extends Tag{
+class Pickaxe extends TieredTool{
 
-	public function getType() : int{
-		return NBT::TAG_End;
+	public function isPickaxe(){
+		return $this->tier;
 	}
 
-	public function read(NBT $nbt, bool $network = false) : void{
-
+	public function getBlockToolType() : int{
+		return BlockToolType::TYPE_PICKAXE;
 	}
 
-	public function write(NBT $nbt, bool $network = false) : void{
+	public function getBlockToolHarvestLevel() : int{
+		return $this->tier;
+	}
 
+	public function getAttackPoints() : int{
+		return self::getBaseDamageFromTier($this->tier) - 2;
 	}
 }
