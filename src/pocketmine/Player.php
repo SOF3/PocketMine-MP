@@ -71,6 +71,7 @@ use pocketmine\event\TextContainer;
 use pocketmine\event\Timings;
 use pocketmine\event\TranslationContainer;
 use pocketmine\form\Form;
+use pocketmine\form\FormHandler;
 use pocketmine\inventory\BigCraftingGrid;
 use pocketmine\inventory\CraftingGrid;
 use pocketmine\inventory\Inventory;
@@ -3278,22 +3279,22 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	/**
 	 * Sends a Form to the player, or queue to send it if a form is already open.
 	 *
-	 * @param Form $form
+	 * @param FormHandler $form
 	 * @param bool $prepend if true, the form will be sent immediately after the current form is closed (if any), before other queued forms.
 	 */
-	public function sendForm(Form $form, bool $prepend = false) : void{
-		$form->setInUse();
-
-		if($this->sentForm !== null){
-			if($prepend){
-				array_unshift($this->formQueue, $form);
-			}else{
-				$this->formQueue[] = $form;
-			}
-			return;
-		}
-
-		$this->sendFormRequestPacket($form);
+	public function sendForm(FormHandler $form, bool $prepend = false) : void{
+//		$form->setInUse();
+//
+//		if($this->sentForm !== null){
+//			if($prepend){
+//				array_unshift($this->formQueue, $form);
+//			}else{
+//				$this->formQueue[] = $form;
+//			}
+//			return;
+//		}
+//
+//		$this->sendFormRequestPacket($form);
 	}
 
 	/**
