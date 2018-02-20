@@ -55,6 +55,10 @@ class Input extends CustomFormElement{
 	 * @return string|null
 	 */
 	public function getValue() : ?string{
+		if(!isset($this->value)){
+			throw new \InvalidStateException("Form values can only be read while \$onSubmit is called");
+		}
+
 		return $this->value;
 	}
 
@@ -69,6 +73,10 @@ class Input extends CustomFormElement{
 		}
 
 		$this->value = $value;
+	}
+
+	public function resetValue() : void{
+		unset($this->value);
 	}
 
 	/**

@@ -63,6 +63,8 @@ abstract class CustomFormElement implements \JsonSerializable{
 	 */
 	abstract public function setValue($value) : void;
 
+	abstract public function resetValue() : void;
+
 	/**
 	 * Returns an array of properties which can be serialized to JSON for sending.
 	 *

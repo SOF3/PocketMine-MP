@@ -68,11 +68,15 @@ class Slider extends CustomFormElement{
 	 * @return float|null
 	 */
 	public function getValue() : ?float{
+		if(!isset($this->value)){
+			throw new \InvalidStateException("Form values can only be read while \$onSubmit is called");
+		}
+
 		return $this->value;
 	}
 
 	/**
-	 * @param float $value
+	 * @param int|float $value
 	 *
 	 * @throws \TypeError
 	 */
@@ -81,7 +85,11 @@ class Slider extends CustomFormElement{
 			throw new \TypeError("Expected float, got " . gettype($value));
 		}
 
-		$this->value = $value;
+		$this->value = (float) $value;
+	}
+
+	public function resetValue() : void{
+		unset($this->value);
 	}
 
 	/**

@@ -21,31 +21,41 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\form\element;
+namespace pocketmine\form\layout;
 
-/**
- * Element which displays some text on a form.
- */
-class Label extends CustomFormElement{
+class MenuOption implements \JsonSerializable{
+	/** @var string */
+	private $text;
+	/** @var FormIcon|null */
+	private $image;
 
-	public function getType() : string{
-		return "label";
+	public function __construct(string $text, ?FormIcon $image = null){
+		$this->text = $text;
+		$this->image = $image;
 	}
 
-	public function getValue(){
-		return null;
+	public function getText() : string{
+		return $this->text;
 	}
 
-	public function setValue($value) : void{
-		assert($value === null);
+	public function getImage() : ?FormIcon{
+		return $this->image;
 	}
 
-	public function resetValue() : void{
+	public function setText(string $text) : void{
+		$this->text = $text;
 	}
 
-
-	public function serializeElementData() : array{
-		return [];
+	public function setImage(?FormIcon $image) : void{
+		$this->image = $image;
 	}
 
+	public function jsonSerialize(){
+		return $this->image !== null ? [
+			"text" => $this->text,
+			"image" => $this->image,
+		] : [
+			"text" => $this->text
+		];
+	}
 }

@@ -360,6 +360,19 @@ class Utils{
 		return preg_replace('#([^\x20-\x7E])#', '.', $str);
 	}
 
+	public static function reflectCallable(callable $callable) : \ReflectionFunctionAbstract{
+		if($callable instanceof \Closure){
+			return new \ReflectionFunction($callable);
+		}
+		if(is_string($callable)){
+			return strpos($callable, "::") !== false ? new \ReflectionMethod($callable) : new \ReflectionFunction($callable);
+		}
+		if(is_array($callable)){
+			return new \ReflectionMethod($callable[0], $callable[1]);
+		}
+		throw new \UnexpectedValueException("Unknown callable type");
+	}
+
 	/*
 	public static function angle3D($pos1, $pos2){
 		$X = $pos1["x"] - $pos2["x"];

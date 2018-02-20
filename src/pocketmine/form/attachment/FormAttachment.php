@@ -21,31 +21,22 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\form\element;
+namespace pocketmine\form\attachment;
 
-/**
- * Element which displays some text on a form.
- */
-class Label extends CustomFormElement{
+abstract class FormAttachment{
+	protected $dependencies = [];
 
-	public function getType() : string{
-		return "label";
+	public function depends(string $otherTag) : FormAttachment{
+		$this->dependencies[$otherTag] = true;
+		return $this;
 	}
 
-	public function getValue(){
-		return null;
+	/**
+	 * Returns a "tag" that can be
+	 *
+	 * @return string
+	 */
+	public function getTag() : string{
+		return get_class($this);
 	}
-
-	public function setValue($value) : void{
-		assert($value === null);
-	}
-
-	public function resetValue() : void{
-	}
-
-
-	public function serializeElementData() : array{
-		return [];
-	}
-
 }

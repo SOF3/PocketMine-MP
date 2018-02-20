@@ -21,31 +21,8 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\form\element;
+namespace pocketmine\form\attachment;
 
-/**
- * Element which displays some text on a form.
- */
-class Label extends CustomFormElement{
-
-	public function getType() : string{
-		return "label";
-	}
-
-	public function getValue(){
-		return null;
-	}
-
-	public function setValue($value) : void{
-		assert($value === null);
-	}
-
-	public function resetValue() : void{
-	}
-
-
-	public function serializeElementData() : array{
-		return [];
-	}
+class MenuFormAttachment extends FormAttachment{
 
 }

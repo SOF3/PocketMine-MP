@@ -68,6 +68,10 @@ use pocketmine\event\player\PlayerToggleSprintEvent;
 use pocketmine\event\player\PlayerTransferEvent;
 use pocketmine\event\server\DataPacketSendEvent;
 use pocketmine\event\Timings;
+use pocketmine\form\FormHandler;
+use pocketmine\form\layout\CustomForm;
+use pocketmine\form\layout\MenuForm;
+use pocketmine\form\layout\ModalForm;
 use pocketmine\inventory\BigCraftingGrid;
 use pocketmine\inventory\CraftingGrid;
 use pocketmine\inventory\Inventory;
@@ -115,6 +119,8 @@ use pocketmine\network\mcpe\protocol\LevelEventPacket;
 use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
 use pocketmine\network\mcpe\protocol\MobEquipmentPacket;
+use pocketmine\network\mcpe\protocol\ModalFormRequestPacket;
+use pocketmine\network\mcpe\protocol\ModalFormResponsePacket;
 use pocketmine\network\mcpe\protocol\MovePlayerPacket;
 use pocketmine\network\mcpe\protocol\PlayerActionPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
@@ -277,6 +283,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	protected $flying = false;
 
 	protected $allowMovementCheats = false;
+
+	/** @var FormHandler[] */
+	protected $formQueue = [];
+	/** @var FormHandler[] */
+	protected $sentForms = [];
 
 	private $needACK = [];
 
@@ -3226,6 +3237,58 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$pk->type = TextPacket::TYPE_WHISPER;
 		$pk->source = $sender;
 		$pk->message = $message;
+		$this->dataPacket($pk);
+	}
+
+	public function sendModalForm(ModalForm $layout, callable $onSubmit){
+		$this->sendForm(new FormHandler($this, $layout, $onSubmit));
+	}
+
+	public function sendMenuForm(MenuForm $layout, callable $onSubmit, ?callable $onClose = null){
+		$this->sendForm(new FormHandler($this, $layout, $onSubmit, $onClose));
+	}
+
+	public function sendCustomForm(CustomForm $layout, callable $onSubmit, ?callable $onClose = null){
+		$this->sendForm(new FormHandler($this, $layout, $onSubmit, $onClose));
+	}
+
+	public function sendForm(FormHandler $form, bool $prepend = false){
+		if($form->isSent()){
+			throw new \InvalidStateException("The FormHandler has already been sent");
+		}
+		$form->markSent();
+		if(empty($this->formQueue) && empty($this->sentForms)){
+			$this->sendFormPacket($form);
+		}elseif($prepend){
+			array_unshift($this->formQueue, $form);
+		}else{
+			$this->formQueue[] = $form;
+		}
+	}
+
+	public function onFormSubmit(ModalFormResponsePacket $packet) : bool{
+		if(isset($this->sentForms[$packet->formId])){
+			$form = $this->sentForms[$packet->formId];
+			unset($this->sentForms[$packet->formId]);
+			$resent = $form->handleResponse(json_decode($packet->formData, true));
+			// TODO handle plugin errors
+			if(!$resent && !empty($this->formQueue)){
+				/** @var FormHandler $form */
+				$form = array_shift($this->formQueue);
+				$this->sendFormPacket($form);
+			}
+		}else{
+			return false;
+		}
+
+		return true;
+	}
+
+	private function sendFormPacket(FormHandler $form) : void{
+		$this->sentForms[$form->getFormId()] = $form;
+		$pk = new ModalFormRequestPacket();
+		$pk->formId = $form->getFormId();
+		$pk->formData = json_encode($form->getLayout());
 		$this->dataPacket($pk);
 	}
 

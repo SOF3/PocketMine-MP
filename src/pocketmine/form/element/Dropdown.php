@@ -54,6 +54,10 @@ class Dropdown extends CustomFormElement{
 	 * @return int|null
 	 */
 	public function getValue() : ?int{
+		if(!isset($this->value)){
+			throw new \InvalidStateException("Form values can only be read while \$onSubmit is called");
+		}
+
 		return $this->selectedOption;
 	}
 
@@ -68,6 +72,10 @@ class Dropdown extends CustomFormElement{
 		}
 
 		$this->selectedOption = $value;
+	}
+
+	public function resetValue() : void{
+		unset($this->selectedOption);
 	}
 
 	/**

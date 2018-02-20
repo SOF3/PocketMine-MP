@@ -52,6 +52,10 @@ class Toggle extends CustomFormElement{
 	 * @return bool
 	 */
 	public function getValue() : bool{
+		if(!isset($this->value)){
+			throw new \InvalidStateException("Form values can only be read while \$onSubmit is called");
+		}
+
 		return $this->value;
 	}
 
@@ -68,11 +72,14 @@ class Toggle extends CustomFormElement{
 		$this->value = $value;
 	}
 
+	public function resetValue() : void{
+		unset($this->value);
+	}
+
 
 	public function serializeElementData() : array{
 		return [
 			"default" => $this->default
 		];
 	}
-
 }
