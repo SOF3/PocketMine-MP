@@ -39,13 +39,15 @@ class CustomForm extends FormLayout{
 	}
 
 	public function add(CustomFormElement ...$element) : CustomFormElement{
+		$this->validateMutable();
 		foreach($element as $e){
 			$this->elements[] = $e;
 		}
 		return $element[count($element) - 1];
 	}
 
-	public function removeAllElements(){
+	public function removeAllElements() : void{
+		$this->validateMutable();
 		$this->elements = [];
 	}
 
@@ -105,7 +107,7 @@ class CustomForm extends FormLayout{
 		];
 	}
 
-	public function isAttachmentApplicable(FormAttachment $attachment) : bool{
-		return $attachment instanceof CustomFormAttachment;
+	public function createAttachment() : FormAttachment{
+		return new CustomFormAttachment();
 	}
 }

@@ -66,6 +66,34 @@ class MenuForm extends FormLayout{
 		$this->options = array_values($this->options); // repack to linear array after the transaction has completed
 	}
 
+	/**
+	 * @return string
+	 */
+	public function getTitle() : string{
+		return $this->title;
+	}
+
+	/**
+	 * @param string $title
+	 */
+	public function setTitle(string $title) : void{
+		$this->title = $title;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getContent() : string{
+		return $this->content;
+	}
+
+	/**
+	 * @param string $content
+	 */
+	public function setContent(string $content) : void{
+		$this->content = $content;
+	}
+
 	public function getSelectedIndex() : int{
 		if(!isset($this->selectedIndex)){
 			throw new \InvalidStateException("Form values can only be read while \$onSubmit is called");
@@ -114,7 +142,7 @@ class MenuForm extends FormLayout{
 		];
 	}
 
-	public function isAttachmentApplicable(FormAttachment $attachment) : bool{
-		return $attachment instanceof MenuFormAttachment;
+	public function createAttachment() : FormAttachment{
+		return new MenuFormAttachment();
 	}
 }

@@ -62,6 +62,20 @@ class ModalForm extends FormLayout{
 	/**
 	 * @return string
 	 */
+	public function getContent() : string{
+		return $this->content;
+	}
+
+	/**
+	 * @param string $content
+	 */
+	public function setContent(string $content) : void{
+		$this->content = $content;
+	}
+
+	/**
+	 * @return string
+	 */
 	public function getYesButtonText() : string{
 		return $this->yesButtonText;
 	}
@@ -71,6 +85,20 @@ class ModalForm extends FormLayout{
 	 */
 	public function setYesButtonText(string $yesButtonText) : void{
 		$this->yesButtonText = $yesButtonText;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getNoButtonText() : string{
+		return $this->noButtonText;
+	}
+
+	/**
+	 * @param string $noButtonText
+	 */
+	public function setNoButtonText(string $noButtonText) : void{
+		$this->noButtonText = $noButtonText;
 	}
 
 	public function isCloseable() : bool{

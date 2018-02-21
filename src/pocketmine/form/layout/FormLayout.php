@@ -26,6 +26,9 @@ namespace pocketmine\form\layout;
 use pocketmine\form\attachment\FormAttachment;
 
 abstract class FormLayout {
+	/** @var string|null */
+	private $tag = null;
+
 	/** @var int */
 	private $immutableLock = 0;
 
@@ -66,6 +69,21 @@ abstract class FormLayout {
 	 */
 	public function createAttachment() : FormAttachment{
 		throw new \BadMethodCallException("FormAttachment is not available for " . get_class($this));
+	}
+
+
+	/**
+	 * @return null|string
+	 */
+	public function getTag() : ?string{
+		return $this->tag;
+	}
+
+	/**
+	 * @param null|string $tag
+	 */
+	public function setTag(?string $tag) : void{
+		$this->tag = $tag;
 	}
 
 
