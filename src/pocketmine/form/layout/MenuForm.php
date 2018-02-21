@@ -25,6 +25,7 @@ namespace pocketmine\form\layout;
 
 use pocketmine\form\attachment\FormAttachment;
 use pocketmine\form\attachment\MenuFormAttachment;
+use pocketmine\form\attachment\ShiftSet;
 
 class MenuForm extends FormLayout{
 	/** @var string */
@@ -102,7 +103,9 @@ class MenuForm extends FormLayout{
 
 	public function jsonSerialize(array $attachments) : array{
 		$options = $this->options;
-		// TODO apply attachments
+
+		ShiftSet::applyPatches($options, $attachments);
+
 		return [
 			"type" => "form",
 			"title" => $this->title,

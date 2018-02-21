@@ -23,6 +23,39 @@ declare(strict_types=1);
 
 namespace pocketmine\form\attachment;
 
-class MenuFormAttachment extends FormAttachment{
+use pocketmine\form\layout\MenuOption;
 
+class MenuFormAttachment extends FormAttachment{
+	public const POSITION_TAIL = ShiftSet::POSITION_TAIL;
+
+	private $entries = [];
+
+	public function append(MenuOption $new) : MenuFormAttachment{
+		return $this->insert($new, self::POSITION_TAIL);
+	}
+
+	public function prepend(MenuOption $new) : MenuFormAttachment{
+		return $this->insert($new, 0);
+	}
+
+	public function insert(MenuOption $new, int $position) : MenuFormAttachment{
+		$this->entries[] = [$new, $position];
+		return $this;
+	}
+
+	/**
+	 * @return MenuOption[][]|int[][]
+	 */
+	public function getEntries() : array{
+		usort($this->entries, function($a, $b){
+			if($a[1] === -1){
+				return $b[1] === -1 ? 0 : 1;
+			}
+			if($b[1] === -1){
+				return -1;
+			}
+			return $a[1] <=> $b[1];
+		});
+		return $this->entries;
+	}
 }

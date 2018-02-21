@@ -31,12 +31,14 @@ abstract class FormLayout {
 
 	/**
 	 * Determines whether a close handler is applicable for this layout
+	 *
 	 * @return bool
 	 */
 	public abstract function isCloseable() : bool;
 
 	/**
 	 * Sets this form's values according to the response
+	 *
 	 * @param mixed $data
 	 * @return bool whether the values have been set successfully. false indicates that the client did not submit the form correctly.
 	 *
@@ -58,11 +60,13 @@ abstract class FormLayout {
 	public abstract function jsonSerialize(array $attachments) : array;
 
 	/**
-	 * Checks whether the attachment is applicable to this form layout
-	 * @param FormAttachment $attachment
-	 * @return bool
+	 * Create an attachment is for this form layout
+	 *
+	 * @return FormAttachment
 	 */
-	public abstract function isAttachmentApplicable(FormAttachment $attachment)  : bool; // no generics :(
+	public function createAttachment() : FormAttachment{
+		throw new \BadMethodCallException("FormAttachment is not available for " . get_class($this));
+	}
 
 
 	public function addLock() : void{

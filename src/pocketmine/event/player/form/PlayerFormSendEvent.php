@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace pocketmine\event\player\form;
 
+use pocketmine\form\attachment\FormAttachment;
 use pocketmine\form\FormHandler;
 use pocketmine\form\layout\FormLayout;
 
@@ -37,5 +38,9 @@ class PlayerFormSendEvent extends PlayerFormEvent{
 
 	public function getLayout() : FormLayout{
 		return $this->form->getLayout();
+	}
+
+	public function addAttachment() : FormAttachment{
+		return $this->form->createAttachment();
 	}
 }

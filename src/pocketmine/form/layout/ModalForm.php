@@ -108,7 +108,7 @@ class ModalForm extends FormLayout{
 	}
 
 	public function resetValue() : void{
-		// TODO: Implement resetValue() method.
+		unset($this->yesButtonClicked);
 	}
 
 	public function jsonSerialize(array $attachments) : array{

@@ -24,11 +24,12 @@ declare(strict_types=1);
 namespace pocketmine\form;
 
 use pocketmine\event\player\form\PlayerFormReceiveEvent;
+use pocketmine\form\attachment\FormAttachment;
 use pocketmine\form\layout\FormLayout;
 use pocketmine\Player;
 use pocketmine\utils\Utils;
 
-final class FormHandler{
+final class FormHandler implements \JsonSerializable{
 	public static $nextFormId = 1;
 
 	/** @var Player */
@@ -41,6 +42,9 @@ final class FormHandler{
 	/** @var float */
 	private $sentAt = 0.0;
 	private $returned = false;
+
+	/** @var FormAttachment[] */
+	private $attachments = [];
 
 	public function __construct(Player $player, FormLayout $layout, callable $onSubmit, ?callable $onClose = null){
 		$this->player = $player;
@@ -103,7 +107,7 @@ final class FormHandler{
 		if($submitted){
 			($this->onSubmit)($this->layout);
 			$this->layout->resetValue();
-			// TODO reset attachments too
+			// no need to reset attachments, because they are used once only
 		}else{
 			if($this->onClose !== null){
 				($this->onClose)();
@@ -140,5 +144,64 @@ final class FormHandler{
 	 */
 	public function getLayout() : FormLayout{
 		return $this->layout;
+	}
+
+	public function createAttachment() : FormAttachment{
+		$this->attachments[] = $att = $this->layout->createAttachment();
+		return $att;
+	}
+
+	public function sortAttachments() : void{
+		// https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm
+
+		$nodes = $this->attachments;
+
+		$s = [];
+		/** @var FormAttachment[][] $outEdges */
+		$outEdges = []; // for each i -> j, $outEdges[i] = [j]
+		/** @var FormAttachment[][] $inEdges */
+		$inEdges = []; // for each i -> j, $inEdges[j] = [i]
+
+		foreach($nodes as $i => $nodeI){
+			for($nodeJ = $nodes[$j = $i + 1], $jMax = count($nodes); $j < $jMax; $nodeJ = $nodes[++$j]){
+				$ij = $nodeJ->isDependentOn($nodeI); // edge(nodes[i] -> nodes[j])
+				$ji = $nodeI->isDependentOn($nodeJ); // edge(nodes[j] -> nodes[i])
+				if($ij && $ji){
+					throw new \LogicException("Circular dependency between {$nodeI->getTag()} and {$nodeJ->getTag()}");
+				}
+				if($ij){
+					$outEdges[spl_object_hash($nodeI)][spl_object_hash($nodeJ)] = $nodeJ;
+					$inEdges[spl_object_hash($nodeJ)][spl_object_hash($nodeI)] = $nodeI;
+				}
+				if($ji){
+					$outEdges[spl_object_hash($nodeJ)][spl_object_hash($nodeI)] = $nodeI;
+					$inEdges[spl_object_hash($nodeI)][spl_object_hash($nodeJ)] = $nodeJ;
+				}
+			}
+		}
+
+		$l = [];
+
+		while(!empty($s)){
+			$n = array_shift($s);
+			$nHash = spl_object_hash($n);
+			$l[] = $n;
+			foreach($outEdges[$nHash] as $mHash => $m){ // all $m where $n -> $m
+				unset($outEdges[$nHash][$mHash], $inEdges[$mHash][$nHash]);
+				// if there is no $inEdges[$x][$y] where $y === $m
+				if(empty($inEdges[$mHash])){
+					$s[] = $m;
+				}
+			}
+		}
+		if(array_sum(array_map("count", $outEdges)) > 0){
+			throw new \LogicException("Circular dependency detected");
+		}
+		$this->attachments = $l;
+	}
+
+
+	public function jsonSerialize(){
+		return $this->layout->jsonSerialize($this->attachments);
 	}
 }

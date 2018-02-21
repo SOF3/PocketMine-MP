@@ -25,6 +25,7 @@ namespace pocketmine\form\layout;
 
 use pocketmine\form\attachment\CustomFormAttachment;
 use pocketmine\form\attachment\FormAttachment;
+use pocketmine\form\attachment\ShiftSet;
 use pocketmine\form\element\CustomFormElement;
 
 class CustomForm extends FormLayout{
@@ -88,9 +89,15 @@ class CustomForm extends FormLayout{
 		}
 	}
 
+	/**
+	 * @param CustomFormAttachment[] $attachments
+	 * @return array
+	 */
 	public function jsonSerialize(array $attachments) : array{
 		$elements = $this->elements;
-		// TODO apply attachments
+
+		ShiftSet::applyPatches($elements, $attachments);
+
 		return [
 			"type" => "custom_form",
 			"title" => $this->title,

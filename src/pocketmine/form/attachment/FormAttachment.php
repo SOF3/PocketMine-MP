@@ -31,6 +31,10 @@ abstract class FormAttachment{
 		return $this;
 	}
 
+	public function isDependentOn(FormAttachment $other) : bool{
+		return isset($this->dependencies[$other->getTag()]);
+	}
+
 	/**
 	 * Returns a "tag" that can be
 	 *
@@ -39,4 +43,6 @@ abstract class FormAttachment{
 	public function getTag() : string{
 		return get_class($this);
 	}
+
+	public abstract function getEntries();
 }

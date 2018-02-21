@@ -3259,6 +3259,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		}
 
 		$this->server->getPluginManager()->callEvent(new PlayerFormSendEvent($form));
+		$form->sortAttachments();
 
 		$form->markSent();
 		if(empty($this->formQueue) && empty($this->sentForms)){
@@ -3301,7 +3302,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->sentForms[$formId] = $form;
 		$pk = new ModalFormRequestPacket();
 		$pk->formId = $formId;
-		$pk->formData = json_encode($form->getLayout());
+		$pk->formData = json_encode($form);
 		$this->dataPacket($pk);
 	}
 
