@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace pocketmine\form;
 
+use pocketmine\event\player\form\PlayerFormReceiveEvent;
 use pocketmine\form\layout\FormLayout;
 use pocketmine\Player;
 use pocketmine\utils\Utils;
@@ -34,8 +35,6 @@ final class FormHandler{
 	private $player;
 	/** @var FormLayout */
 	private $layout;
-	/** @var int */
-	private $formId;
 	/** @var callable */
 	private $onSubmit, $onClose;
 
@@ -46,13 +45,30 @@ final class FormHandler{
 	public function __construct(Player $player, FormLayout $layout, callable $onSubmit, ?callable $onClose = null){
 		$this->player = $player;
 		$this->layout = $layout;
-		$this->formId = self::$nextFormId++;
+		$this->setOnSubmit($onSubmit);
+		$this->setOnClose($onClose);
+
+		$this->layout->addLock();
+	}
+
+	/**
+	 * @param callable $onSubmit
+	 */
+	public function setOnSubmit(callable $onSubmit) : void{
 		assert($this->acceptsCorrectLayout($onSubmit), get_class($this->layout) . " is not assignable to \$onSubmit");
 		$this->onSubmit = $onSubmit;
+	}
+
+	/**
+	 * @param callable $onClose
+	 */
+	public function setOnClose(?callable $onClose) : void{
 		if($onClose !== null){
 			assert($this->layout->isCloseable(), "\$onClose is not applicable for a non-closeable form layout");
 			assert(Utils::reflectCallable($onClose)->getNumberOfRequiredParameters() === 0, "\$onClose must not accept required parameters");
 			$this->onClose = $onClose;
+		}else{
+			$this->onClose = null;
 		}
 	}
 
@@ -75,8 +91,15 @@ final class FormHandler{
 
 		// TODO process attachments by FILO order
 		$submitted = $this->layout->acceptValue($response);
-		// TODO fire event, allow resend without setting $this->returned to true, return true
+
+		$this->player->getServer()->getPluginManager()->callEvent($ev = new PlayerFormReceiveEvent($this));
+		if($ev->shouldResend()){
+			return true;
+		}
+
 		$this->returned = true;
+		$this->layout->removeLock();
+
 		if($submitted){
 			($this->onSubmit)($this->layout);
 			$this->layout->resetValue();
@@ -97,6 +120,10 @@ final class FormHandler{
 		return $this->sentAt > 0;
 	}
 
+	public function getSendTime() : ?float{
+		return $this->sentAt === 0.0 ? null : $this->sentAt;
+	}
+
 	public function isReturned() : bool{
 		return $this->returned;
 	}
@@ -113,12 +140,5 @@ final class FormHandler{
 	 */
 	public function getLayout() : FormLayout{
 		return $this->layout;
-	}
-
-	/**
-	 * @return int
-	 */
-	public function getFormId() : int{
-		return $this->formId;
 	}
 }

@@ -40,6 +40,7 @@ use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\inventory\InventoryCloseEvent;
 use pocketmine\event\player\cheat\PlayerIllegalMoveEvent;
+use pocketmine\event\player\form\PlayerFormSendEvent;
 use pocketmine\event\player\PlayerAchievementAwardedEvent;
 use pocketmine\event\player\PlayerAnimationEvent;
 use pocketmine\event\player\PlayerBedEnterEvent;
@@ -3240,22 +3241,25 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->dataPacket($pk);
 	}
 
-	public function sendModalForm(ModalForm $layout, callable $onSubmit){
-		$this->sendForm(new FormHandler($this, $layout, $onSubmit));
+	public function sendModalForm(ModalForm $layout, callable $onSubmit, bool $prepend) : void{
+		$this->sendForm(new FormHandler($this, $layout, $onSubmit), $prepend);
 	}
 
-	public function sendMenuForm(MenuForm $layout, callable $onSubmit, ?callable $onClose = null){
-		$this->sendForm(new FormHandler($this, $layout, $onSubmit, $onClose));
+	public function sendMenuForm(MenuForm $layout, callable $onSubmit, ?callable $onClose = null, bool $prepend = false) : void{
+		$this->sendForm(new FormHandler($this, $layout, $onSubmit, $onClose), $prepend);
 	}
 
-	public function sendCustomForm(CustomForm $layout, callable $onSubmit, ?callable $onClose = null){
-		$this->sendForm(new FormHandler($this, $layout, $onSubmit, $onClose));
+	public function sendCustomForm(CustomForm $layout, callable $onSubmit, ?callable $onClose = null, bool $prepend = false) : void{
+		$this->sendForm(new FormHandler($this, $layout, $onSubmit, $onClose), $prepend);
 	}
 
-	public function sendForm(FormHandler $form, bool $prepend = false){
+	public function sendForm(FormHandler $form, bool $prepend = false) : void{
 		if($form->isSent()){
 			throw new \InvalidStateException("The FormHandler has already been sent");
 		}
+
+		$this->server->getPluginManager()->callEvent(new PlayerFormSendEvent($form));
+
 		$form->markSent();
 		if(empty($this->formQueue) && empty($this->sentForms)){
 			$this->sendFormPacket($form);
@@ -3270,9 +3274,17 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		if(isset($this->sentForms[$packet->formId])){
 			$form = $this->sentForms[$packet->formId];
 			unset($this->sentForms[$packet->formId]);
-			$resent = $form->handleResponse(json_decode($packet->formData, true));
-			// TODO handle plugin errors
-			if(!$resent && !empty($this->formQueue)){
+
+			try{
+				$resend = $form->handleResponse(json_decode($packet->formData, true));
+			}catch(\Throwable$e){
+				$this->server->getLogger()->logException($e);
+				$resend = false;
+			}
+
+			if($resend){
+				$this->sendFormPacket($form);
+			}elseif(!empty($this->formQueue)){
 				/** @var FormHandler $form */
 				$form = array_shift($this->formQueue);
 				$this->sendFormPacket($form);
@@ -3285,9 +3297,10 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	}
 
 	private function sendFormPacket(FormHandler $form) : void{
-		$this->sentForms[$form->getFormId()] = $form;
+		$formId = FormHandler::$nextFormId++;
+		$this->sentForms[$formId] = $form;
 		$pk = new ModalFormRequestPacket();
-		$pk->formId = $form->getFormId();
+		$pk->formId = $formId;
 		$pk->formData = json_encode($form->getLayout());
 		$this->dataPacket($pk);
 	}
