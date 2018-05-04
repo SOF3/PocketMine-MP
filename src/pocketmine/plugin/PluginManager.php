@@ -458,7 +458,7 @@ class PluginManager{
 			$this->server->getScheduler()->cancelTasks($plugin);
 			HandlerList::unregisterAll($plugin);
 
-			// TODO remove plugin permissions
+			$this->server->getPermissionManager()->clearPlugin($plugin);
 		}
 	}
 

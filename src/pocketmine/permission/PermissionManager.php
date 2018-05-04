@@ -27,7 +27,9 @@ use pocketmine\plugin\Plugin;
 
 final class PermissionManager{
 	/** @var Permission[] */
-	private $permissions;
+	private $permissions = [];
+	/** @var Permissible[] */
+	private $permissibles = [];
 
 	/**
 	 * Permission predicates are evaluated when hasPermission() is called and other predicates of higher priority are
@@ -67,11 +69,51 @@ final class PermissionManager{
 		return $this->permissions[$permission] ?? null;
 	}
 
+	public function addPermissible(Permissible $permissible) : void{
+		if(isset($this->permissibles[spl_object_hash($permissible)])){
+			throw new \InvalidStateException("Permissible is created twice");
+		}
+		$this->permissibles[spl_object_hash($permissible)] = $permissible;
+	}
+
+	public function removePermissible(Permissible $permissible) : void{
+		if(!isset($this->permissibles[spl_object_hash($permissible)])){
+			throw new \InvalidStateException("Permissible was not created or already closed");
+		}
+		unset($this->permissibles[spl_object_hash($permissible)]);
+	}
+
+	/**
+	 * @return Permission[]
+	 */
+	public function getPermissions() : array{
+		return $this->permissions;
+	}
+
+	/**
+	 * @return Permissible[]
+	 */
+	public function getPermissibles() : array{
+		return $this->permissibles;
+	}
+
+	/**
+	 * @param Permission|string $permission
+	 * @return Permissible[]
+	 */
+	public function getPermissiblesWith($permission) : array{
+		return array_filter($this->permissibles, function(Permissible $permissible) use ($permission): bool{
+			return $permissible->hasPermission($permission);
+		});
+	}
+
 
 	public function clearPlugin(Plugin $plugin) : void{
 		foreach($this->permissions as $permission){
-			if($permission->getOwner()===$plugin){
+			if($permission->getOwner() === $plugin){
 				$this->unregisterPermission($permission);
+			}else{
+				$permission->clearPlugin($plugin);
 			}
 		}
 	}

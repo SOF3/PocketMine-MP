@@ -36,6 +36,13 @@ trait PermissibleBase{
 
 	protected function createPermissible(PermissionManager $manager, $args = null) : void{
 		$this->manager = $manager;
+		if(!($this instanceof Permissible)){
+			throw new \LogicException("PermissibleBase users must implement Permissible");
+		}
+		$manager->addPermissible($this);
+
+		// TODO fire event
+
 		$this->onPermissibleCreated($args);
 	}
 
@@ -43,7 +50,8 @@ trait PermissibleBase{
 	}
 
 	protected function closePermissible() : void{
-		// TODO
+		$this->manager->removePermissible($this);
+		unset($this->attachments);
 	}
 
 	/**
@@ -135,6 +143,16 @@ trait PermissibleBase{
 				$this->attachments[$attachment->getPermission()->getName()] = $attachment->higher;
 			}else{
 				unset($this->attachments[$attachment->getPermission()->getName()]);
+			}
+		}
+	}
+
+	public function clearPlugin(Plugin $plugin) : void{
+		foreach($this->attachments as $link){
+			for(; $link !== null; $link = $link->higher){
+				if($link->getPlugin() === $plugin){
+					$this->removeAttachment($link);
+				}
 			}
 		}
 	}

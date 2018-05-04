@@ -950,13 +950,6 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 		$this->sendPlayStatus(PlayStatusPacket::PLAYER_SPAWN);
 
-		if($this->hasPermission(Server::BROADCAST_CHANNEL_USERS)){
-			$this->server->getPluginManager()->subscribeToPermission(Server::BROADCAST_CHANNEL_USERS, $this);
-		}
-		if($this->hasPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE)){
-			$this->server->getPluginManager()->subscribeToPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE, $this);
-		}
-
 		$this->server->getPluginManager()->callEvent($ev = new PlayerJoinEvent($this,
 			new TranslationContainer(TextFormat::YELLOW . "%multiplayer.player.joined", [
 				$this->getDisplayName()
@@ -3288,9 +3281,6 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				}
 				$this->interface->close($this, $notify ? $reason : "");
 				$this->sessionAdapter = null;
-
-				$this->server->getPluginManager()->unsubscribeFromPermission(Server::BROADCAST_CHANNEL_USERS, $this);
-				$this->server->getPluginManager()->unsubscribeFromPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE, $this);
 
 				$this->stopSleep();
 

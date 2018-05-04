@@ -1129,8 +1129,8 @@ class Server{
 		$path = $this->getDataPath() . "worlds/" . $name . "/";
 		if(!($this->getLevelByName($name) instanceof Level)){
 			return is_dir($path) and !empty(array_filter(scandir($path, SCANDIR_SORT_NONE), function($v){
-				return $v !== ".." and $v !== ".";
-			}));
+					return $v !== ".." and $v !== ".";
+				}));
 		}
 
 		return true;
@@ -1744,9 +1744,9 @@ class Server{
 		if(!is_array($recipients)){
 			/** @var Player[] $recipients */
 			$recipients = [];
-			foreach($this->pluginManager->getPermissionSubscriptions(self::BROADCAST_CHANNEL_USERS) as $permissible){
-				if($permissible instanceof Player and $permissible->hasPermission(self::BROADCAST_CHANNEL_USERS)){
-					$recipients[spl_object_hash($permissible)] = $permissible; // do not send messages directly, or some might be repeated
+			foreach($this->players as $hash => $player){
+				if($player->isOnline() && $player->hasPermission(self::BROADCAST_CHANNEL_USERS)){
+					$recipients[$hash] = $player; // do not send messages directly, or some might be repeated
 				}
 			}
 		}
@@ -1770,9 +1770,9 @@ class Server{
 			/** @var Player[] $recipients */
 			$recipients = [];
 
-			foreach($this->pluginManager->getPermissionSubscriptions(self::BROADCAST_CHANNEL_USERS) as $permissible){
-				if($permissible instanceof Player and $permissible->hasPermission(self::BROADCAST_CHANNEL_USERS)){
-					$recipients[spl_object_hash($permissible)] = $permissible; // do not send messages directly, or some might be repeated
+			foreach($this->players as $hash => $player){
+				if($player->isOnline() and $player->hasPermission(self::BROADCAST_CHANNEL_USERS)){
+					$recipients[$hash] = $player; // do not send messages directly, or some might be repeated
 				}
 			}
 		}
@@ -1788,8 +1788,8 @@ class Server{
 	/**
 	 * @param string        $title
 	 * @param string        $subtitle
-	 * @param int           $fadeIn Duration in ticks for fade-in. If -1 is given, client-sided defaults will be used.
-	 * @param int           $stay Duration in ticks to stay on screen for
+	 * @param int           $fadeIn  Duration in ticks for fade-in. If -1 is given, client-sided defaults will be used.
+	 * @param int           $stay    Duration in ticks to stay on screen for
 	 * @param int           $fadeOut Duration in ticks for fade-out.
 	 * @param Player[]|null $recipients
 	 *
@@ -1800,9 +1800,9 @@ class Server{
 			/** @var Player[] $recipients */
 			$recipients = [];
 
-			foreach($this->pluginManager->getPermissionSubscriptions(self::BROADCAST_CHANNEL_USERS) as $permissible){
-				if($permissible instanceof Player and $permissible->hasPermission(self::BROADCAST_CHANNEL_USERS)){
-					$recipients[spl_object_hash($permissible)] = $permissible; // do not send messages directly, or some might be repeated
+			foreach($this->players as $hash => $player){
+				if($player->isOnline() and $player->hasPermission(self::BROADCAST_CHANNEL_USERS)){
+					$recipients[$hash] = $player; // do not send messages directly, or some might be repeated
 				}
 			}
 		}
@@ -1825,7 +1825,7 @@ class Server{
 		/** @var CommandSender[] $recipients */
 		$recipients = [];
 		foreach(explode(";", $permissions) as $permission){
-			foreach($this->pluginManager->getPermissionSubscriptions($permission) as $permissible){
+			foreach($this->players as $hash=>$player){
 				if($permissible instanceof CommandSender and $permissible->hasPermission($permission)){
 					$recipients[spl_object_hash($permissible)] = $permissible; // do not send messages directly, or some might be repeated
 				}
@@ -1864,7 +1864,9 @@ class Server{
 		}
 		Timings::$playerNetworkTimer->startTiming();
 
-		$targets = array_filter($players, function(Player $player) : bool{ return $player->isConnected(); });
+		$targets = array_filter($players, function(Player $player) : bool{
+			return $player->isConnected();
+		});
 
 		if(!empty($targets)){
 			$pk = new BatchPacket();
@@ -2232,7 +2234,8 @@ class Server{
 			$this->logger->logException($e);
 			try{
 				$this->logger->critical($this->getLanguage()->translateString("pocketmine.crash.error", [$e->getMessage()]));
-			}catch(\Throwable $e){}
+			}catch(\Throwable $e){
+			}
 		}
 
 		//$this->checkMemory();

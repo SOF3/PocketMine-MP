@@ -55,7 +55,7 @@ class PlayerChatEvent extends PlayerEvent implements Cancellable{
 		$this->format = $format;
 
 		if($recipients === null){
-			$this->recipients = Server::getInstance()->getPluginManager()->getPermissionSubscriptions(Server::BROADCAST_CHANNEL_USERS);
+			$this->recipients = Server::getInstance()->getPermissionManager()->getPermissiblesWith(Server::BROADCAST_CHANNEL_USERS);
 		}else{
 			$this->recipients = $recipients;
 		}

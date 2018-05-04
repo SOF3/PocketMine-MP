@@ -102,7 +102,7 @@ final class Permission{
 	/**
 	 * @var Permission[]
 	 */
-	private $children;
+	private $children = [];
 
 	public function __construct(string $name, string $description = null, ?Permission $parent = null, string $defaultValue = null, ?Plugin $owner = null){
 		$this->name = $name;
@@ -110,6 +110,10 @@ final class Permission{
 		$this->parent = $parent;
 		$this->defaultValue = $defaultValue ?? self::$DEFAULT_PERMISSION;
 		$this->owner = $owner;
+
+		if($parent !== null){
+			$parent->children[$name] = $this;
+		}
 
 		Server::getInstance()->getPermissionManager()->registerPermission($this);
 	}
@@ -187,6 +191,20 @@ final class Permission{
 				return !$op;
 		}
 		throw new \UnexpectedValueException("Unexpected defaultValue $this->defaultValue");
+	}
+
+	public function clearPlugin(Plugin $plugin) : void{
+		foreach($this->particularPredicates as $key => $predicate){
+			if($predicate->getPlugin() === $plugin){
+				unset($this->particularPredicates[$key]);
+			}
+		}
+
+		foreach($this->groupPredicates as $key => $predicate){
+			if($predicate->getPlugin() === $plugin){
+				unset($this->groupPredicates[$key]);
+			}
+		}
 	}
 
 	/**
