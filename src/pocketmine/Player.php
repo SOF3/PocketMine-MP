@@ -159,9 +159,7 @@ use pocketmine\utils\UUID;
  * Main class that handles networking, recovery, and packet sending to the server part
  */
 class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
-	use PermissibleBase{
-		recalculatePermissions as private recalculatePermissiblePermissions;
-	}
+	use PermissibleBase;
 
 	public const SURVIVAL = 0;
 	public const CREATIVE = 1;
@@ -599,8 +597,6 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 
 	public function recalculatePermissions(){
-		$this->recalculatePermissiblePermissions();
-
 		$this->sendCommandData();
 	}
 
@@ -1833,22 +1829,30 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 		$this->setSkin($skin);
 
+		$this->createPermissible($this->server->getPermissionManager(), $packet);
+
+		return true;
+	}
+
+	/**
+	 * @param LoginPacket $packet
+	 */
+	protected function onPermissibleCreated($packet) : void{
 		$this->server->getPluginManager()->callEvent($ev = new PlayerPreLoginEvent($this, "Plugin reason"));
 		if($ev->isCancelled()){
 			$this->close("", $ev->getKickMessage());
-
-			return true;
+			return;
 		}
 
 		if(!$this->server->isWhitelisted($this->iusername) and $this->kick("Server is white-listed", false)){
-			return true;
+			return;
 		}
 
 		if(
 			($this->isBanned() or $this->server->getIPBans()->isBanned($this->getAddress())) and
 			$this->kick("You are banned", false)
 		){
-			return true;
+			return;
 		}
 
 		if(!$packet->skipVerification){
@@ -1856,8 +1860,6 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		}else{
 			$this->onVerifyCompleted($packet, null, true);
 		}
-
-		return true;
 	}
 
 	public function sendPlayStatus(int $status, bool $immediate = false){

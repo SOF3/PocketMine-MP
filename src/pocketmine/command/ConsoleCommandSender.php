@@ -34,6 +34,10 @@ class ConsoleCommandSender implements CommandSender{
 	/** @var int|null */
 	protected $lineHeight = null;
 
+	public function __construct(){
+		$this->createPermissible($this->getServer()->getPermissionManager());
+	}
+
 	public function isClosed() : bool{
 		return false;
 	}

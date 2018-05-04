@@ -23,13 +23,23 @@ declare(strict_types=1);
 
 namespace pocketmine\permission;
 
-use InvalidStateException;
+use pocketmine\plugin\Plugin;
 
 trait PermissibleBase{
+	/** @var PermissionManager */
+	private $manager;
+
+	/** @var PermissionAttachment[] permission name => lowest priority attachment */
+	private $attachments = [];
+
 	abstract public function isClosed() : bool;
 
-	protected function createPermissible() : void{
+	protected function createPermissible(PermissionManager $manager, $args = null) : void{
+		$this->manager = $manager;
+		$this->onPermissibleCreated($args);
+	}
 
+	protected function onPermissibleCreated($args) : void{
 	}
 
 	protected function closePermissible() : void{
@@ -41,17 +51,91 @@ trait PermissibleBase{
 	 * @return bool
 	 */
 	public function hasPermission($permission) : bool{
-		if($permission instanceof Permission){
-			$permission = $permission->getName();
-		}
+		assert($this instanceof Permissible);
+
 		if(!$this->isClosed()){
-			throw new InvalidStateException("Trying to get permissions of closed permissible");
+			throw new \InvalidStateException("Trying to get permissions of closed permissible");
 		}
 
-		// TODO
+		if(is_string($permission)){
+			$permission = $this->manager->getPermission($permission);
+			if($permission === null){
+				throw new \InvalidArgumentException("Attempt to check permissible for an unregistered permission");
+			}
+		}
+		$permName = $permission->getName();
+
+		if(($result = $permission->testParticular($this)) !== null){
+			return $result;
+		}
+
+		if(isset($this->attachments[$permName])){
+			$result = $this->attachments[$permName]->result;
+			if($result !== null){
+				return $result;
+			}
+		}
+
+		if(($result = $permission->testGroup($this)) !== null){
+			return $result;
+		}
+
+		for($parent = $permission->getParent(); $parent !== null; $parent = $parent->getParent()){
+			if(isset($this->attachments[$permName])){
+				$result = $this->attachments[$permName]->result;
+				if($result !== null){
+					return $result;
+				}
+			}
+		}
+
+		return $permission->checkDefault($this->isOp());
 	}
 
-	public function recalculatePermissions() : void{
-		// TODO
+	public function addAttachment(Plugin $plugin, string $permName, float $priority, bool $inherit, ?bool $ternary) : PermissionAttachment{
+		$permission = $this->manager->getPermission($permName);
+		if($permission === null){
+			throw new \InvalidArgumentException("Attempt to add attachment for an unregistered permission");
+		}
+
+		$attachment = new PermissionAttachment($permission, $plugin, $priority, $inherit, $ternary);
+		if(!isset($this->attachments[$permName])){
+			$this->attachments[$permName] = [$attachment, $attachment];
+			$attachment->recalculateValue();
+			return $attachment;
+		}
+
+		$attachment->higher = $this->attachments[$permName];
+		while($attachment->higher !== null && $attachment->getPriority() > $attachment->higher->getPriority()){
+			$attachment->lower = $attachment->higher;
+			$attachment->higher = $attachment->higher->higher;
+		}
+
+		if($attachment->higher !== null){
+			$attachment->higher->lower = $attachment;
+		}
+		if($attachment->lower !== null){
+			$attachment->lower->higher = $attachment;
+		}
+
+		$attachment->recalculateValue();
+		return $attachment;
+	}
+
+	public function removeAttachment(PermissionAttachment $attachment) : void{
+		if($attachment->higher !== null){
+			$attachment->higher->lower = $attachment->lower;
+		}
+
+		if($attachment->lower !== null){
+			$attachment->lower->higher = $attachment->higher;
+			$attachment->lower->recalculateValue();
+		}else{
+			if($attachment->higher !== null){
+				$this->attachments[$attachment->getPermission()->getName()] = $attachment->higher;
+			}else{
+				unset($this->attachments[$attachment->getPermission()->getName()]);
+			}
+		}
 	}
 }

@@ -23,5 +23,56 @@ declare(strict_types=1);
 
 namespace pocketmine\permission;
 
+use pocketmine\plugin\Plugin;
+
 final class PermissionManager{
+	/** @var Permission[] */
+	private $permissions;
+
+	/**
+	 * Permission predicates are evaluated when hasPermission() is called and other predicates of higher priority are
+	 *
+	 * Warning: Always prefer using permission attachments if possible. Permission attachments will make hasPermission() evaluate slower and does not affect the command list sent to clients.
+	 *
+	 * @param string                        $permission
+	 * @param Plugin                        $plugin
+	 * @param ParticularPermissionPredicate $predicate
+	 */
+	public function registerParticularPredicate(string $permission, Plugin $plugin, ParticularPermissionPredicate $predicate) : void{
+		if(!isset($this->permissions[$permission])){
+			throw new \InvalidArgumentException("The permission $permission was not registered");
+		}
+	}
+
+	public function registerGroupPredicate(string $permission, Plugin $plugin, GroupPermissionPredicate $predicate) : void{
+		if(!isset($this->permissions[$permission])){
+			throw new \InvalidArgumentException("The permission $permission was not registered");
+		}
+	}
+
+
+	public function registerPermission(Permission $permission) : void{
+		if(isset($this->permissions[$permission->getName()])){
+			throw new \InvalidArgumentException("{$permission->getName()} was already registered. Permissions are only automatically unregistered when the owner plugin is disabled");
+		}
+
+		$this->permissions[$permission->getName()] = $permission;
+	}
+
+	public function unregisterPermission(Permission $permission) : void{
+		unset($this->permissions[$permission->getName()]);
+	}
+
+	public function getPermission(string $permission) : ?Permission{
+		return $this->permissions[$permission] ?? null;
+	}
+
+
+	public function clearPlugin(Plugin $plugin) : void{
+		foreach($this->permissions as $permission){
+			if($permission->getOwner()===$plugin){
+				$this->unregisterPermission($permission);
+			}
+		}
+	}
 }
