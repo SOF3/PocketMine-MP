@@ -30,10 +30,7 @@ use pocketmine\event\EventPriority;
 use pocketmine\event\HandlerList;
 use pocketmine\event\Listener;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
-use pocketmine\permission\Permissible;
-use pocketmine\permission\Permission;
 use pocketmine\Server;
-use pocketmine\timings\Timings;
 use pocketmine\timings\TimingsHandler;
 use pocketmine\utils\MainLogger;
 
@@ -53,36 +50,6 @@ class PluginManager{
 	 * @var Plugin[]
 	 */
 	protected $plugins = [];
-
-	/**
-	 * @var Permission[]
-	 */
-	protected $permissions = [];
-
-	/**
-	 * @var Permission[]
-	 */
-	protected $defaultPerms = [];
-
-	/**
-	 * @var Permission[]
-	 */
-	protected $defaultPermsOp = [];
-
-	/**
-	 * @var Permissible[][]
-	 */
-	protected $permSubs = [];
-
-	/**
-	 * @var Permissible[]
-	 */
-	protected $defSubs = [];
-
-	/**
-	 * @var Permissible[]
-	 */
-	protected $defSubsOp = [];
 
 	/**
 	 * @var PluginLoader[]
@@ -386,173 +353,6 @@ class PluginManager{
 	}
 
 	/**
-	 * @param string $name
-	 *
-	 * @return null|Permission
-	 */
-	public function getPermission(string $name){
-		if(isset($this->permissions[$name])){
-			return $this->permissions[$name];
-		}
-
-		return null;
-	}
-
-	/**
-	 * @param Permission $permission
-	 *
-	 * @return bool
-	 */
-	public function addPermission(Permission $permission) : bool{
-		if(!isset($this->permissions[$permission->getName()])){
-			$this->permissions[$permission->getName()] = $permission;
-			$this->calculatePermissionDefault($permission);
-
-			return true;
-		}
-
-		return false;
-	}
-
-	/**
-	 * @param string|Permission $permission
-	 */
-	public function removePermission($permission){
-		if($permission instanceof Permission){
-			unset($this->permissions[$permission->getName()]);
-		}else{
-			unset($this->permissions[$permission]);
-		}
-	}
-
-	/**
-	 * @param bool $op
-	 *
-	 * @return Permission[]
-	 */
-	public function getDefaultPermissions(bool $op) : array{
-		if($op){
-			return $this->defaultPermsOp;
-		}else{
-			return $this->defaultPerms;
-		}
-	}
-
-	/**
-	 * @param Permission $permission
-	 */
-	public function recalculatePermissionDefaults(Permission $permission){
-		if(isset($this->permissions[$permission->getName()])){
-			unset($this->defaultPermsOp[$permission->getName()]);
-			unset($this->defaultPerms[$permission->getName()]);
-			$this->calculatePermissionDefault($permission);
-		}
-	}
-
-	/**
-	 * @param Permission $permission
-	 */
-	private function calculatePermissionDefault(Permission $permission){
-		Timings::$permissionDefaultTimer->startTiming();
-		if($permission->getDefault() === Permission::DEFAULT_OP or $permission->getDefault() === Permission::DEFAULT_TRUE){
-			$this->defaultPermsOp[$permission->getName()] = $permission;
-			$this->dirtyPermissibles(true);
-		}
-
-		if($permission->getDefault() === Permission::DEFAULT_NOT_OP or $permission->getDefault() === Permission::DEFAULT_TRUE){
-			$this->defaultPerms[$permission->getName()] = $permission;
-			$this->dirtyPermissibles(false);
-		}
-		Timings::$permissionDefaultTimer->startTiming();
-	}
-
-	/**
-	 * @param bool $op
-	 */
-	private function dirtyPermissibles(bool $op){
-		foreach($this->getDefaultPermSubscriptions($op) as $p){
-			$p->recalculatePermissions();
-		}
-	}
-
-	/**
-	 * @param string      $permission
-	 * @param Permissible $permissible
-	 */
-	public function subscribeToPermission(string $permission, Permissible $permissible){
-		if(!isset($this->permSubs[$permission])){
-			$this->permSubs[$permission] = [];
-		}
-		$this->permSubs[$permission][spl_object_hash($permissible)] = $permissible;
-	}
-
-	/**
-	 * @param string      $permission
-	 * @param Permissible $permissible
-	 */
-	public function unsubscribeFromPermission(string $permission, Permissible $permissible){
-		if(isset($this->permSubs[$permission])){
-			unset($this->permSubs[$permission][spl_object_hash($permissible)]);
-			if(count($this->permSubs[$permission]) === 0){
-				unset($this->permSubs[$permission]);
-			}
-		}
-	}
-
-	/**
-	 * @param string $permission
-	 *
-	 * @return array|Permissible[]
-	 */
-	public function getPermissionSubscriptions(string $permission) : array{
-		return $this->permSubs[$permission] ?? [];
-	}
-
-	/**
-	 * @param bool        $op
-	 * @param Permissible $permissible
-	 */
-	public function subscribeToDefaultPerms(bool $op, Permissible $permissible){
-		if($op){
-			$this->defSubsOp[spl_object_hash($permissible)] = $permissible;
-		}else{
-			$this->defSubs[spl_object_hash($permissible)] = $permissible;
-		}
-	}
-
-	/**
-	 * @param bool        $op
-	 * @param Permissible $permissible
-	 */
-	public function unsubscribeFromDefaultPerms(bool $op, Permissible $permissible){
-		if($op){
-			unset($this->defSubsOp[spl_object_hash($permissible)]);
-		}else{
-			unset($this->defSubs[spl_object_hash($permissible)]);
-		}
-	}
-
-	/**
-	 * @param bool $op
-	 *
-	 * @return Permissible[]
-	 */
-	public function getDefaultPermSubscriptions(bool $op) : array{
-		if($op){
-			return $this->defSubsOp;
-		}
-
-		return $this->defSubs;
-	}
-
-	/**
-	 * @return Permission[]
-	 */
-	public function getPermissions() : array{
-		return $this->permissions;
-	}
-
-	/**
 	 * @param Plugin $plugin
 	 *
 	 * @return bool
@@ -571,9 +371,8 @@ class PluginManager{
 	public function enablePlugin(Plugin $plugin){
 		if(!$plugin->isEnabled()){
 			try{
-				foreach($plugin->getDescription()->getPermissions() as $perm){
-					$this->addPermission($perm);
-				}
+				// TODO add plugin permissions
+
 				$plugin->getPluginLoader()->enablePlugin($plugin);
 			}catch(\Throwable $e){
 				$this->server->getLogger()->logException($e);
@@ -658,9 +457,8 @@ class PluginManager{
 
 			$this->server->getScheduler()->cancelTasks($plugin);
 			HandlerList::unregisterAll($plugin);
-			foreach($plugin->getDescription()->getPermissions() as $perm){
-				$this->removePermission($perm);
-			}
+
+			// TODO remove plugin permissions
 		}
 	}
 
@@ -668,9 +466,6 @@ class PluginManager{
 		$this->disablePlugins();
 		$this->plugins = [];
 		$this->fileAssociations = [];
-		$this->permissions = [];
-		$this->defaultPerms = [];
-		$this->defaultPermsOp = [];
 	}
 
 	/**

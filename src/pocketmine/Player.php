@@ -145,8 +145,6 @@ use pocketmine\network\mcpe\protocol\UpdateBlockPacket;
 use pocketmine\network\mcpe\VerifyLoginTask;
 use pocketmine\network\SourceInterface;
 use pocketmine\permission\PermissibleBase;
-use pocketmine\permission\PermissionAttachment;
-use pocketmine\permission\PermissionAttachmentInfo;
 use pocketmine\plugin\Plugin;
 use pocketmine\resourcepacks\ResourcePack;
 use pocketmine\tile\ItemFrame;
@@ -161,6 +159,9 @@ use pocketmine\utils\UUID;
  * Main class that handles networking, recovery, and packet sending to the server part
  */
 class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
+	use PermissibleBase{
+		recalculatePermissions as private recalculatePermissiblePermissions;
+	}
 
 	public const SURVIVAL = 0;
 	public const CREATIVE = 1;
@@ -596,72 +597,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->sendSettings();
 	}
 
-	/**
-	 * @param permission\Permission|string $name
-	 *
-	 * @return bool
-	 */
-	public function isPermissionSet($name) : bool{
-		return $this->perm->isPermissionSet($name);
-	}
-
-	/**
-	 * @param permission\Permission|string $name
-	 *
-	 * @return bool
-	 *
-	 * @throws \InvalidStateException if the player is closed
-	 */
-	public function hasPermission($name) : bool{
-		if($this->closed){
-			throw new \InvalidStateException("Trying to get permissions of closed player");
-		}
-		return $this->perm->hasPermission($name);
-	}
-
-	/**
-	 * @param Plugin $plugin
-	 * @param string $name
-	 * @param bool $value
-	 *
-	 * @return PermissionAttachment
-	 */
-	public function addAttachment(Plugin $plugin, string $name = null, bool $value = null) : PermissionAttachment{
-		return $this->perm->addAttachment($plugin, $name, $value);
-	}
-
-	/**
-	 * @param PermissionAttachment $attachment
-	 */
-	public function removeAttachment(PermissionAttachment $attachment){
-		$this->perm->removeAttachment($attachment);
-	}
 
 	public function recalculatePermissions(){
-		$this->server->getPluginManager()->unsubscribeFromPermission(Server::BROADCAST_CHANNEL_USERS, $this);
-		$this->server->getPluginManager()->unsubscribeFromPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE, $this);
-
-		if($this->perm === null){
-			return;
-		}
-
-		$this->perm->recalculatePermissions();
-
-		if($this->hasPermission(Server::BROADCAST_CHANNEL_USERS)){
-			$this->server->getPluginManager()->subscribeToPermission(Server::BROADCAST_CHANNEL_USERS, $this);
-		}
-		if($this->hasPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE)){
-			$this->server->getPluginManager()->subscribeToPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE, $this);
-		}
+		$this->recalculatePermissiblePermissions();
 
 		$this->sendCommandData();
-	}
-
-	/**
-	 * @return PermissionAttachmentInfo[]
-	 */
-	public function getEffectivePermissions() : array{
-		return $this->perm->getEffectivePermissions();
 	}
 
 	public function sendCommandData(){
@@ -710,7 +650,6 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 */
 	public function __construct(SourceInterface $interface, string $ip, int $port){
 		$this->interface = $interface;
-		$this->perm = new PermissibleBase($this);
 		$this->namedtag = new CompoundTag();
 		$this->server = Server::getInstance();
 		$this->ip = $ip;
@@ -3175,8 +3114,8 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 *
 	 * @param string $title
 	 * @param string $subtitle
-	 * @param int    $fadeIn Duration in ticks for fade-in. If -1 is given, client-sided defaults will be used.
-	 * @param int    $stay Duration in ticks to stay on screen for
+	 * @param int    $fadeIn  Duration in ticks for fade-in. If -1 is given, client-sided defaults will be used.
+	 * @param int    $stay    Duration in ticks to stay on screen for
 	 * @param int    $fadeOut Duration in ticks for fade-out.
 	 */
 	public function addTitle(string $title, string $subtitle = "", int $fadeIn = -1, int $stay = -1, int $fadeOut = -1){
@@ -3226,8 +3165,8 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	/**
 	 * Sets the title duration.
 	 *
-	 * @param int $fadeIn Title fade-in time in ticks.
-	 * @param int $stay Title stay time in ticks.
+	 * @param int $fadeIn  Title fade-in time in ticks.
+	 * @param int $stay    Title stay time in ticks.
 	 * @param int $fadeOut Title fade-out time in ticks.
 	 */
 	public function setTitleDuration(int $fadeIn, int $stay, int $fadeOut){
@@ -3245,7 +3184,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 * Internal function used for sending titles.
 	 *
 	 * @param string $title
-	 * @param int $type
+	 * @param int    $type
 	 */
 	protected function sendTitleText(string $title, int $type){
 		$pk = new SetTitlePacket();
@@ -3333,7 +3272,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 * flag set to kick without the "Kicked by admin" part instead of this method.
 	 *
 	 * @param TextContainer|string $message Message to be broadcasted
-	 * @param string               $reason Reason showed in console
+	 * @param string               $reason  Reason showed in console
 	 * @param bool                 $notify
 	 */
 	final public function close($message = "", string $reason = "generic reason", bool $notify = true){
@@ -3415,10 +3354,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 				$this->spawnPosition = null;
 
-				if($this->perm !== null){
-					$this->perm->clearPermissions();
-					$this->perm = null;
-				}
+				$this->closePermissible();
 			}catch(\Throwable $e){
 				$this->server->getLogger()->logException($e);
 			}finally{
@@ -3839,7 +3775,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 * player is already viewing the specified inventory.
 	 *
 	 * @param Inventory $inventory
-	 * @param int|null  $forceId Forces a special ID for the window
+	 * @param int|null  $forceId     Forces a special ID for the window
 	 * @param bool      $isPermanent Prevents the window being removed if true.
 	 *
 	 * @return int

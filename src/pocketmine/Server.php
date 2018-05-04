@@ -81,6 +81,7 @@ use pocketmine\network\rcon\RCON;
 use pocketmine\network\upnp\UPnP;
 use pocketmine\permission\BanList;
 use pocketmine\permission\DefaultPermissions;
+use pocketmine\permission\PermissionManager;
 use pocketmine\plugin\PharPluginLoader;
 use pocketmine\plugin\Plugin;
 use pocketmine\plugin\PluginLoadOrder;
@@ -135,6 +136,9 @@ class Server{
 
 	/** @var PluginManager */
 	private $pluginManager = null;
+
+	/** @var PermissionManager */
+	private $permissionManager = null;
 
 	private $profilingTickRate = 20;
 
@@ -607,6 +611,13 @@ class Server{
 	 */
 	public function getPluginManager(){
 		return $this->pluginManager;
+	}
+
+	/**
+	 * @return PermissionManager
+	 */
+	public function getPermissionManager() : PermissionManager{
+		return $this->permissionManager;
 	}
 
 	/**
@@ -1595,6 +1606,7 @@ class Server{
 			Timings::init();
 			TimingsHandler::setEnabled((bool) $this->getProperty("settings.enable-profiling", false));
 
+			$this->permissionManager = new PermissionManager();
 			$this->consoleSender = new ConsoleCommandSender();
 			$this->commandMap = new SimpleCommandMap($this);
 
@@ -1611,7 +1623,6 @@ class Server{
 			$this->resourceManager = new ResourcePackManager($this->getDataPath() . "resource_packs" . DIRECTORY_SEPARATOR);
 
 			$this->pluginManager = new PluginManager($this, $this->commandMap);
-			$this->pluginManager->subscribeToPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE, $this->consoleSender);
 			$this->profilingTickRate = (float) $this->getProperty("settings.profile-report-trigger", 20);
 			$this->pluginManager->registerInterface(PharPluginLoader::class);
 			$this->pluginManager->registerInterface(ScriptPluginLoader::class);
