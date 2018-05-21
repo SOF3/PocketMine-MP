@@ -2519,7 +2519,13 @@ class Server{
 
 		Timings::$connectionTimer->startTiming();
 		$this->network->processInterfaces();
+
+		if($this->rcon !== null){
+			$this->rcon->check();
+		}
 		Timings::$connectionTimer->stopTiming();
+
+		$this->pluginManager->checkEvents($this->tickCounter);
 
 		Timings::$schedulerTimer->startTiming();
 		$this->scheduler->mainThreadHeartbeat($this->tickCounter);
