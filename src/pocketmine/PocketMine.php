@@ -277,32 +277,58 @@ namespace pocketmine {
 	@ini_set("opcache.mmap_base", bin2hex(random_bytes(8))); //Fix OPCache address errors
 
 	$exitCode = 0;
-	do{
-		if(!file_exists(\pocketmine\DATA . "server.properties") and !isset($opts["no-wizard"])){
-			$installer = new SetupWizard();
-			if(!$installer->run()){
-				$exitCode = -1;
-				break;
-			}
+
+	if(!file_exists(\pocketmine\DATA . "server.properties") and !isset($opts["no-wizard"])){
+		$installer = new SetupWizard();
+		if(!$installer->run()){
+			$exitCode = -1;
+			goto end;
 		}
+	}
 
-		ThreadManager::init();
-		new Server($autoloader, $logger, \pocketmine\DATA, \pocketmine\PLUGIN_PATH);
+	while(true){
+		echo "Repeating\n";
+		$thread = new class extends \Thread{
+			/** @var \BaseClassLoader */
+			public $autoloader;
+			/** @var MainLogger */
+			public $logger;
+			public $complete = false;
 
-		$logger->info("Stopping other threads");
+			public function run() : void{
+				require COMPOSER_AUTOLOADER_PATH;
+				$this->autoloader->register(false);
+				ThreadManager::init();
+				new Server($this->autoloader, $this->logger, \pocketmine\DATA, \pocketmine\PLUGIN_PATH);
 
-		$killer = new ServerKiller(8);
-		$killer->start(PTHREADS_INHERIT_NONE);
-		usleep(10000); //Fixes ServerKiller not being able to start on single-core machines
+				$this->logger->info("Stopping other threads");
 
-		if(ThreadManager::getInstance()->stopAll() > 0){
-			if(\pocketmine\DEBUG > 1){
-				echo "Some threads could not be stopped, performing a force-kill" . PHP_EOL . PHP_EOL;
+				$killer = new ServerKiller(8);
+				$killer->start(PTHREADS_INHERIT_NONE);
+				usleep(10000); //Fixes ServerKiller not being able to start on single-core machines
+
+				if(ThreadManager::getInstance()->stopAll() > 0){
+					if(\pocketmine\DEBUG > 1){
+						echo "Some threads could not be stopped, performing a force-kill" . PHP_EOL . PHP_EOL;
+					}
+//					Utils::kill(getmypid());
+				}
+
+				$this->complete = true;
 			}
-			Utils::kill(getmypid());
-		}
-	}while(false);
+		};
+		$thread->autoloader = $autoloader;
+		$thread->logger = $logger;
+		echo "Starting server\n";
+		$thread->start();
 
+		while(!$thread->complete){
+			sleep(1);
+		}
+		echo "Restarting server\n";
+	}
+
+	end:
 	$logger->shutdown();
 	$logger->join();
 
