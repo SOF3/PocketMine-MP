@@ -19,9 +19,12 @@ before_script:
  - cd ..
  - echo "extension=pthreads.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
  - composer install
+ - ls -A ~
+ - find ~/.composer || true
 
 script:
  - ./tests/travis.sh -t4
+
 
 notifications:
  email: false
